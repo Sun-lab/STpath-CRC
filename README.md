@@ -161,11 +161,11 @@ print(overall_proportions)
 Your model directory should contain:
 ```
 model_dir/
-├── xgboost_model_Cancer_Cells.json
-├── xgboost_model_Stromal_Cells.json
-├── xgboost_model_Normal_Epithelial_Cells.json
-├── xgboost_model_T_cells.json
-└── xgboost_model_Other_Immune_Cells.json
+├── xgboost_model_Cancer Cells_Combined_external_prediction.model
+├── xgboost_model_Normal Epithelial Cells_Combined_external_prediction.model
+├── xgboost_model_T Cells_Combined_external_prediction.model
+├── xgboost_model_Stromal Cells_Combined_external_prediction.model
+└── xgboost_model_Other Immune Cells_Combined_external_prediction.model
 ```
 
 ### Required Feature Files
@@ -173,27 +173,12 @@ model_dir/
 Your features directory should contain:
 ```
 features_dir/
-├── important_features_Cancer_Cells.pkl
-├── important_features_Stromal_Cells.pkl
-├── important_features_Normal_Epithelial_Cells.pkl
-├── important_features_T_cells.pkl
-└── important_features_Other_Immune_Cells.pkl
+├── important_features_Cancer Cells.pkl
+├── important_features_Stromal Cells.pkl
+├── important_features_Normal Epithelial Cells.pkl
+├── important_features_T cells.pkl
+└── important_features_Other Immune Cells.pkl
 ```
-
-## Output Format
-
-### JSON Output
-The tool generates a comprehensive JSON file containing:
-- Image metadata
-- Processing parameters
-- Patch-level predictions
-- Summary statistics
-
-### CSV Output
-A CSV file with patch-level results for easy analysis:
-- Patch coordinates and IDs
-- Individual cell type proportions
-- Normalized proportions
 
 ### Example Output Structure
 ```json
