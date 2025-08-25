@@ -22,17 +22,11 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 ### Cancer Cells
 
-Conch_Cancer_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
-ProvGigapath_Cancer_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow2_Cancer_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow_Cancer_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
-UNI2h_Cancer_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
-len(UNI2h_Cancer_Cells_data["feature_importances"][0])
-len(Virchow2_Cancer_Cells_data["feature_importances"][0])
-len(Virchow_Cancer_Cells_data["feature_importances"][0])
-len(ProvGigapath_Cancer_Cells_data["feature_importances"][0])
-len(Conch_Cancer_Cells_data["feature_importances"][0])
-
+Conch_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
+ProvGigapath_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow2_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
+UNI2h_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
 
 
 Important_Features_Cancer_Cells = {}
@@ -98,15 +92,11 @@ Important_Features_Cancer_Cells["UNI2h"] = list(UNI2h_FI_Cancer_Cells_DF_mean_so
 Important_Features_Cancer_Cells["UNI2h_percentage"] = round(UNI2h_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
-
-
-
 print(Important_Features_Cancer_Cells["UNI2h_percentage"])
 print(Important_Features_Cancer_Cells["Virchow2_percentage"])
 print(Important_Features_Cancer_Cells["Virchow_percentage"])
 print(Important_Features_Cancer_Cells["ProvGigapath_percentage"])
 print(Important_Features_Cancer_Cells["Conch_percentage"])
-
 
 print(len(Important_Features_Cancer_Cells["UNI2h"]))
 print(len(Important_Features_Cancer_Cells["Virchow2"]))
@@ -114,22 +104,17 @@ print(len(Important_Features_Cancer_Cells["Virchow"]))
 print(len(Important_Features_Cancer_Cells["ProvGigapath"]))
 print(len(Important_Features_Cancer_Cells["Conch"]))
 
-pickle.dump(Important_Features_Cancer_Cells, open("Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_Cancer Cells.pkl", "wb"))
+pickle.dump(Important_Features_Cancer_Cells, open("xgboost_prediction/important_features_Cancer Cells.pkl", "wb"))
 
 
 
 ### Stromal Cells
 
-Conch_Stromal_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Conch_individual_level_100/xgboost_results_individual_level.pt")
-ProvGigapath_Stromal_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_ProvGigapath_individual_level_100/xgboost_results_individual_level.pt")
-Virchow2_Stromal_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Virchow2_individual_level_100/xgboost_results_individual_level.pt")
-Virchow_Stromal_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Virchow_individual_level_100/xgboost_results_individual_level.pt")
-UNI2h_Stromal_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_UNI2h_individual_level_100/xgboost_results_individual_level.pt")
-len(UNI2h_Stromal_Cells_data["feature_importances"][0])
-len(Virchow2_Stromal_Cells_data["feature_importances"][0])
-len(Virchow_Stromal_Cells_data["feature_importances"][0])
-len(ProvGigapath_Stromal_Cells_data["feature_importances"][0])
-len(Conch_Stromal_Cells_data["feature_importances"][0])
+Conch_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
+ProvGigapath_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow2_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
+UNI2h_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
 
 
 Important_Features_Stromal_Cells = {}
@@ -192,8 +177,6 @@ UNI2h_FI_Stromal_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(UNI2h_FI_St
 Important_Features_Stromal_Cells["UNI2h"] = list(UNI2h_FI_Stromal_Cells_DF_mean_sorted.index[0:round(len(UNI2h_FI_Stromal_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
 Important_Features_Stromal_Cells["UNI2h_percentage"] = round(UNI2h_FI_Stromal_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_Stromal_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
-
-
 print(Important_Features_Stromal_Cells["UNI2h_percentage"])
 print(Important_Features_Stromal_Cells["Virchow2_percentage"])
 print(Important_Features_Stromal_Cells["Virchow_percentage"])
@@ -207,19 +190,17 @@ print(len(Important_Features_Stromal_Cells["Virchow"]))
 print(len(Important_Features_Stromal_Cells["ProvGigapath"]))
 print(len(Important_Features_Stromal_Cells["Conch"]))
 
-pickle.dump(Important_Features_Stromal_Cells, open("Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_Stromal Cells.pkl", "wb"))
-
+pickle.dump(Important_Features_Stromal_Cells, open("xgboost_prediction/important_features_Stromal Cells.pkl", "wb"))
 
 
 
 ### Normal Epithelial Cells
 
-Conch_Normal_Epithelial_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Normal Epithelial Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
-ProvGigapath_Normal_Epithelial_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Normal Epithelial Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow_Normal_Epithelial_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Normal Epithelial Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow2_Normal_Epithelial_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Normal Epithelial Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
-UNI2h_Normal_Epithelial_Cells_data = torch.load(f = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Normal Epithelial Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
-
+Conch_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
+ProvGigapath_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow2_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
+UNI2h_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
 
 Important_Features_Normal_Epithelial_Cells = {}
 
@@ -302,11 +283,11 @@ pickle.dump(Important_Features_Normal_Epithelial_Cells, open("Colorectal_Cancer_
 
 ###  T cells
 
-Conch_T_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/T Cells_Conch_individual_level_100/xgboost_results_individual_level.pt")
-ProvGigapath_T_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/T Cells_ProvGigapath_individual_level_100/xgboost_results_individual_level.pt")
-Virchow_T_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/T Cells_Virchow_individual_level_100/xgboost_results_individual_level.pt")
-Virchow2_T_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/T Cells_Virchow2_individual_level_100/xgboost_results_individual_level.pt")
-UNI2h_T_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/T Cells_UNI2h_individual_level_100/xgboost_results_individual_level.pt")
+Conch_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
+ProvGigapath_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow2_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
+UNI2h_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
 
 Important_Features_T_Cells = {}
 
@@ -388,11 +369,11 @@ pickle.dump(Important_Features_T_Cells, open("Colorectal_Cancer_HE_patches/xgboo
 
 ### Other Immune Cells
 
-Conch_Other_Immune_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Other Immune Cells_Conch_individual_level_100/xgboost_results_individual_level.pt")
-ProvGigapath_Other_Immune_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Other Immune Cells_ProvGigapath_individual_level_100/xgboost_results_individual_level.pt")
-Virchow_Other_Immune_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Other Immune Cells_Virchow_individual_level_100/xgboost_results_individual_level.pt")
-Virchow2_Other_Immune_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Other Immune Cells_Virchow2_individual_level_100/xgboost_results_individual_level.pt")
-UNI2h_Other_Immune_Cells_data = torch.load(f = "Colorectal_Cancer_HE_patches/xgboost_prediction/Other Immune Cells_UNI2h_individual_level_100/xgboost_results_individual_level.pt")
+Conch_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
+ProvGigapath_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
+Virchow2_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
+UNI2h_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
 
 Important_Features_Other_Immune_Cells = {}
 
@@ -466,7 +447,7 @@ print(len(Important_Features_Other_Immune_Cells["Virchow"]))
 print(len(Important_Features_Other_Immune_Cells["Virchow2"]))
 print(len(Important_Features_Other_Immune_Cells["UNI2h"]))
 
-pickle.dump(Important_Features_Other_Immune_Cells, open("Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_Other Immune Cells.pkl", "wb"))
+pickle.dump(Important_Features_Other_Immune_Cells, open("xgboost_prediction/important_features_Other Immune Cells.pkl", "wb"))
 
 
 
@@ -475,11 +456,11 @@ pickle.dump(Important_Features_Other_Immune_Cells, open("Colorectal_Cancer_HE_pa
 # Create multi-sheet Excel with important features for all cell types
 
 
-Important_Features_Cancer_Cells = pickle.load(open("STPath_COAD_Models_v1.0/Important_Features/important_features_Cancer Cells.pkl", "rb"))
-Important_Features_Stromal_Cells = pickle.load(open("STPath_COAD_Models_v1.0/Important_Features/important_features_Stromal Cells.pkl", "rb"))
-Important_Features_Normal_Epithelial_Cells = pickle.load(open("STPath_COAD_Models_v1.0/Important_Features/important_features_Normal Epithelial Cells.pkl", "rb"))
-Important_Features_T_Cells = pickle.load(open("STPath_COAD_Models_v1.0/Important_Features/important_features_T Cells.pkl", "rb"))
-Important_Features_Other_Immune_Cells = pickle.load(open("STPath_COAD_Models_v1.0/Important_Features/important_features_Other Immune Cells.pkl", "rb"))
+Important_Features_Cancer_Cells = pickle.load(open("xgboost_prediction/important_features_Cancer Cells.pkl", "rb"))
+Important_Features_Stromal_Cells = pickle.load(open("xgboost_prediction/important_features_Stromal Cells.pkl", "rb"))
+Important_Features_Normal_Epithelial_Cells = pickle.load(open("xgboost_prediction/important_features_Normal Epithelial Cells.pkl", "rb"))
+Important_Features_T_Cells = pickle.load(open("xgboost_prediction/important_features_T Cells.pkl", "rb"))
+Important_Features_Other_Immune_Cells = pickle.load(open("xgboost_prediction/important_features_Other Immune Cells.pkl", "rb"))
 
 
 wb = Workbook()
@@ -530,7 +511,7 @@ for cell_type in cell_types_order:
             # Load the corresponding data to get importance scores
             # Convert cell_type key to the actual folder name format
             folder_name = cell_type.replace('_', ' ')
-            data_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/{folder_name}_{model}_individual_level_ratio100/xgboost_results_individual_level.pt"
+            data_file = f"xgboost_prediction/{folder_name}_{model}_individual_level_ratio100/xgboost_results_individual_level.pt"
             print(f"  Loading: {data_file}")
             model_results = torch.load(data_file)
             
@@ -590,7 +571,7 @@ for cell_type in cell_types_order:
     print(f"  Added {max_features} rows for {cell_type}")
 
 # Save the Excel file
-output_excel_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Important_Features_All_CellTypes2.xlsx"
+output_excel_path = "xgboost_prediction/Important_Features_All_CellTypes.xlsx"
 wb.save(output_excel_path)
 print(f"\n✅ Multi-sheet Excel file saved to: {output_excel_path}")
 
