@@ -27,7 +27,7 @@ from sklearn.metrics import r2_score
 
 
 ### (A) Original UMAP Visualization (with all features)
-def create_umap_visualizations(data_path, cell_type, foundation_model, legend_on = False, save_dir="Colorectal_Cancer_HE_patches/Visual/UMAPs/"):
+def create_umap_visualizations(data_path, cell_type, foundation_model, legend_on = False, save_dir="Visual/UMAPs/"):
     """
     Create UMAP dimensionality reduction visualization, generating three differently colored plots
     """
@@ -200,12 +200,12 @@ def create_umap_visualizations(data_path, cell_type, foundation_model, legend_on
 
 
 for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:     
-    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_ResNet50.pt", cell_type = cell_type, foundation_model = "ResNet50")
-    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Conch.pt", cell_type = cell_type, foundation_model = "Conch")
-    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_ProvGigapath.pt", cell_type = cell_type, foundation_model = "ProvGigapath")
-    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_UNI2h.pt", cell_type = cell_type, foundation_model = "UNI2h")
-    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Virchow.pt", cell_type = cell_type, foundation_model = "Virchow")
-    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Virchow2.pt", cell_type = cell_type, foundation_model = "Virchow2")
+    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_ResNet50.pt", cell_type = cell_type, foundation_model = "ResNet50")
+    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_Conch.pt", cell_type = cell_type, foundation_model = "Conch")
+    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_ProvGigapath.pt", cell_type = cell_type, foundation_model = "ProvGigapath")
+    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_UNI2h.pt", cell_type = cell_type, foundation_model = "UNI2h")
+    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_Virchow.pt", cell_type = cell_type, foundation_model = "Virchow")
+    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_Virchow2.pt", cell_type = cell_type, foundation_model = "Virchow2")
 
 
 for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:     
@@ -220,7 +220,7 @@ def create_umap_visualizations_Xgboost(foundation_model, cell_type, if_legend = 
 
 
 
-    result_dir = f"Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_{foundation_model}_individual_level_ratio100/xgboost_results_individual_level.pt"
+    result_dir = f"xgboost_prediction/{cell_type}_{foundation_model}_individual_level_ratio100/xgboost_results_individual_level.pt"
     result_data = torch.load(result_dir)
     
     # Correct way to build feature importance DataFrame
@@ -244,7 +244,7 @@ def create_umap_visualizations_Xgboost(foundation_model, cell_type, if_legend = 
 
 
     # 1. Read data
-    data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_{foundation_model}.pt"
+    data_path = f"Training_features/{cell_type}_training_precomputed_features_{foundation_model}.pt"
     print(f"Loading data from {data_path}")
     data = torch.load(data_path)
     embeddings = data['embeddings']
