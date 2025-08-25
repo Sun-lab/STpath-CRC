@@ -265,17 +265,17 @@ features_dir/
 ### Single Image Processing
 ```bash
 # Using YAML config
-python CRC_Cell_Proportion_Predictor.py --config config.yaml --image_path image.tif
+python STPath_COAD_Predictor.py --config config.yaml --image_path image.tif
 
 # Override specific parameters
-python CRC_Cell_Proportion_Predictor.py --config config.yaml --image_path image.tif --patch_size 320 --device cuda
+python STPath_COAD_Predictor.py --config config.yaml --image_path image.tif --patch_size 320 --device cuda
 ```
 
 ### Batch Processing
 ```bash
 # Process multiple images
 for image in images/*.tif; do
-    python CRC_Cell_Proportion_Predictor.py --config config.yaml --image_path "$image"
+    python STPath_COAD_Predictor.py --config config.yaml --image_path "$image"
 done
 ```
 
@@ -286,19 +286,3 @@ If you use this tool in your research, please cite the relevant foundation model
 ## License
 
 This tool is provided for research and clinical use. Please ensure compliance with relevant regulations and ethical guidelines.
-
-## Support
-
-For issues and questions:
-1. Check the troubleshooting section
-2. Review example usage
-3. Verify all dependencies are installed
-4. Check file paths and permissions
-
-## Version History
-
-- **v1.0**: Initial release with basic functionality
-- Support for 5 foundation models
-- XGBoost integration
-- Flexible patch sizing
-- Multiple output formats
