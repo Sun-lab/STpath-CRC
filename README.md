@@ -1,4 +1,4 @@
-# STPath_COAD Predictor
+# STPath_COAD_Predictor
 
 A comprehensive tool for predicting cell type proportions in colorectal cancer H&E images using multiple foundation models and XGBoost classifiers.
 
@@ -86,7 +86,7 @@ paths:
 
 3. **Run the predictor:**
 ```bash
-python CRC_Cell_Proportion_Predictor.py --config config.yaml --image_path /path/to/your/image.tif
+python STPath_COAD_Predictor.py --config config.yaml --image_path /path/to/your/image.tif
 ```
 
 ### Command Line Override
@@ -94,7 +94,7 @@ python CRC_Cell_Proportion_Predictor.py --config config.yaml --image_path /path/
 You can also override any configuration value via command line:
 
 ```bash
-python CRC_Cell_Proportion_Predictor.py \
+python STPath_COAD_Predictor.py \
     --config config.yaml \
     --image_path /path/to/your/image.tif \
     --patch_size 320 \
