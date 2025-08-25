@@ -71,8 +71,8 @@ huggingface:
   token: "your_huggingface_token_here"
 
 models:
-  xgboost_dir: "/path/to/xgboost_models"
-  features_dir: "/path/to/important_features"
+  xgboost_dir: "STPath_COAD_Models_v1.0/Trained_Models"
+  features_dir: "STPath_COAD_Models_v1.0/Important_Features"
 
 processing:
   patch_size: 240
