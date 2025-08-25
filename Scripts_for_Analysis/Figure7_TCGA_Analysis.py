@@ -1269,11 +1269,11 @@ if __name__ == "__main__":
     
     # Define XGBoost model paths for external prediction
     xgboost_model_paths = {
-        "Cancer Cells": "Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Combined_external_prediction/xgboost_model_Cancer Cells_Combined_external_prediction.model",
-        "Stromal Cells": "Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Combined_external_prediction/xgboost_model_Stromal Cells_Combined_external_prediction.model",
-        "Normal Epithelial Cells": "Colorectal_Cancer_HE_patches/xgboost_prediction/Normal Epithelial Cells_Combined_external_prediction/xgboost_model_Normal Epithelial Cells_Combined_external_prediction.model",
-        "T cells": "Colorectal_Cancer_HE_patches/xgboost_prediction/T cells_Combined_external_prediction/xgboost_model_T cells_Combined_external_prediction.model",
-        "Other Immune Cells": "Colorectal_Cancer_HE_patches/xgboost_prediction/Other Immune Cells_Combined_external_prediction/xgboost_model_Other Immune Cells_Combined_external_prediction.model"
+        "Cancer Cells": "xgboost_prediction/Cancer Cells_Combined_external_prediction/xgboost_model_Cancer Cells_Combined_external_prediction.model",
+        "Stromal Cells": "xgboost_prediction/Stromal Cells_Combined_external_prediction/xgboost_model_Stromal Cells_Combined_external_prediction.model",
+        "Normal Epithelial Cells": "xgboost_prediction/Normal Epithelial Cells_Combined_external_prediction/xgboost_model_Normal Epithelial Cells_Combined_external_prediction.model",
+        "T cells": "xgboost_prediction/T cells_Combined_external_prediction/xgboost_model_T cells_Combined_external_prediction.model",
+        "Other Immune Cells": "xgboost_prediction/Other Immune Cells_Combined_external_prediction/xgboost_model_Other Immune Cells_Combined_external_prediction.model"
     }
     
     # Find all TIFF files in the input directory
@@ -1314,7 +1314,7 @@ if __name__ == "__main__":
 
     # Batch visualization for all TCGA results
     tcga_predicted_dir = "TCGA_COAD_HE_predicted"
-    tcga_visual_dir = "Colorectal_Cancer_HE_patches/Visual/TCGA"
+    tcga_visual_dir = "Visual/TCGA"
     
 
     # Create visualization directory if it doesn't exist
@@ -1366,7 +1366,7 @@ if __name__ == "__main__":
     
     # Find all .pt files
     input_dir = "TCGA_COAD_HE_predicted"
-    base_dir = "Colorectal_Cancer_HE_patches/Visual/TCGA_Distance"
+    base_dir = "Visual/TCGA_Distance"
     
     pt_files = glob.glob(os.path.join(input_dir, "*.pt"))
 
@@ -1488,7 +1488,7 @@ if __name__ == "__main__":
     log(f"Successfully added age data for {age_available}/{len(features_df)} samples")
     log(f"Successfully added gender data for {gender_available}/{len(features_df)} samples")
     
-    features_df.to_csv("Colorectal_Cancer_HE_patches/TCGA_Features_Complete_WithClinical.csv", index=False)
+    features_df.to_csv("TCGA_Features_Complete_WithClinical.csv", index=False)
     
     features_df['Patient_Gender'].value_counts()
 
