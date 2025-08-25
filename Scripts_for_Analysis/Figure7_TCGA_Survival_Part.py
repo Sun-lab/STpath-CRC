@@ -18,13 +18,13 @@ import pandas as pd
 
 ### Read TCGA Clinical Data Resource (CDR) supplemental table
 print("Reading TCGA CDR supplemental table...")
-TCGA_CDR_file_path = "Colorectal_Cancer_HE_patches/TCGA-CDR-SupplementalTableS1.xlsx"
+TCGA_CDR_file_path = "TCGA-CDR-SupplementalTableS1.xlsx"
 
 # Read the first sheet of the Excel file with first column as index
 TCGA_CDR_df = pd.read_excel(TCGA_CDR_file_path, sheet_name=0, index_col=0)
 
 ### Read TCGA Features Complete with Clinical data
-TCGA_features_file_path = "Colorectal_Cancer_HE_patches/TCGA_Features_Complete_WithClinical.csv"
+TCGA_features_file_path = "TCGA_Features_Complete_WithClinical.csv"
 
 # Read the CSV file
 TCGA_features_df = pd.read_csv(TCGA_features_file_path)
@@ -49,12 +49,12 @@ merged_df.dropna(inplace=True)
 merged_df.drop('bcr_patient_barcode', axis=1, inplace=True)
 merged_df.drop(["age_at_initial_pathologic_diagnosis", "gender"], axis=1, inplace=True)
 
-merged_df.to_csv("Colorectal_Cancer_HE_patches/TCGA_Features_Complete_WithClinical_CDR.csv", index=False)
+merged_df.to_csv("TCGA_Features_Complete_WithClinical_CDR.csv", index=False)
 
 
 
 ### Read TCGA Features Complete with Clinical data
-TCGA_merged_features_file_path = "Colorectal_Cancer_HE_patches/TCGA_Features_Complete_WithClinical_CDR.csv"
+TCGA_merged_features_file_path = "TCGA_Features_Complete_WithClinical_CDR.csv"
 
 # Read the CSV file
 TCGA_merged_features_df = pd.read_csv(TCGA_merged_features_file_path)
@@ -103,7 +103,7 @@ TCGA_merged_features_df = pd.concat([TCGA_merged_features_df, stage_dummies], ax
 TCGA_merged_features_df.drop("Stage_Group", axis=1, inplace=True)
 TCGA_merged_features_df.drop("ajcc_pathologic_tumor_stage", axis=1, inplace=True)
 
-TCGA_merged_features_df.to_csv("Colorectal_Cancer_HE_patches/TCGA_Survival_Analysis.csv", index=False)
+TCGA_merged_features_df.to_csv("TCGA_Survival_Analysis.csv", index=False)
 
 
 
@@ -115,7 +115,7 @@ print("="*70)
 from lifelines import CoxPHFitter
 import numpy as np
 
-survival_df = pd.read_csv("Colorectal_Cancer_HE_patches/TCGA_Survival_Analysis.csv")
+survival_df = pd.read_csv("TCGA_Survival_Analysis.csv")
 
 ### Convert proportion variables to percentages (multiply by 100)
 print("Converting proportion variables to percentages...")
@@ -230,7 +230,7 @@ cox_results_sorted['Significance'] = cox_results_sorted['P_Value'].apply(
 )
 
 # Save results
-output_path = "Colorectal_Cancer_HE_patches/Marginal_CoxPH_Regression_PFI_Results.csv"
+output_path = "Marginal_CoxPH_Regression_PFI_Results.csv"
 cox_results_sorted.to_csv(output_path, index=False)
 print(f"Marginal PFI results saved to: {output_path}")
 
@@ -325,7 +325,7 @@ cox_os_sorted['Significance'] = cox_os_sorted['P_Value'].apply(
 )
 
 # Save OS results
-output_path_os = "Colorectal_Cancer_HE_patches/Marginal_CoxPH_Regression_OS_Results.csv"
+output_path_os = "Marginal_CoxPH_Regression_OS_Results.csv"
 cox_os_sorted.to_csv(output_path_os, index=False)
 print(f"Marginal OS results saved to: {output_path_os}")
 
@@ -411,7 +411,7 @@ joint_pfi_sorted['Significance'] = joint_pfi_sorted['P_Value'].apply(
 )
 
 # Save joint PFI results
-output_path_joint_pfi = "Colorectal_Cancer_HE_patches/Joint_CoxPH_Regression_PFI_Results.csv"
+output_path_joint_pfi = "Joint_CoxPH_Regression_PFI_Results.csv"
 joint_pfi_sorted.to_csv(output_path_joint_pfi, index=False)
 print(f"Joint PFI results saved to: {output_path_joint_pfi}")
 
@@ -493,7 +493,7 @@ joint_os_sorted['Significance'] = joint_os_sorted['P_Value'].apply(
 )
 
 # Save joint OS results
-output_path_joint_os = "Colorectal_Cancer_HE_patches/Joint_CoxPH_Regression_OS_Results.csv"
+output_path_joint_os = "Joint_CoxPH_Regression_OS_Results.csv"
 joint_os_sorted.to_csv(output_path_joint_os, index=False)
 print(f"Joint OS results saved to: {output_path_joint_os}")
 
@@ -605,7 +605,7 @@ if len(set(all_groups)) > 1:
             bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='black', linewidth=1))
 
 plt.tight_layout()
-plt.savefig('Colorectal_Cancer_HE_patches/Visual/KM_Curves_PFI_by_Stage.png', dpi=300, bbox_inches='tight')
+plt.savefig('Visual/KM_Curves_PFI_by_Stage.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 
@@ -714,7 +714,7 @@ if len(set(all_groups_q)) > 1:
             bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='black', linewidth=1))
 
 plt.tight_layout()
-plt.savefig('Colorectal_Cancer_HE_patches/Visual/KM_Curves_PFI_by_Tumor_to_Other_Immune_Distance_Quartiles.png', dpi=300, bbox_inches='tight')
+plt.savefig('Visual/KM_Curves_PFI_by_Tumor_to_Other_Immune_Distance_Quartiles.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 
@@ -816,7 +816,7 @@ if len(set(all_groups_stromal)) > 1:
             bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='black', linewidth=1))
 
 plt.tight_layout()
-plt.savefig('Colorectal_Cancer_HE_patches/Visual/KM_Curves_PFI_by_Stromal_to_Other_Immune_Distance_Quartiles.png', dpi=300, bbox_inches='tight')
+plt.savefig('Visual/KM_Curves_PFI_by_Stromal_to_Other_Immune_Distance_Quartiles.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 
@@ -891,7 +891,7 @@ if len(set(all_groups_os)) > 1:
             bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='black', linewidth=1))
 
 plt.tight_layout()
-plt.savefig('Colorectal_Cancer_HE_patches/Visual/KM_Curves_OS_by_Stage.png', dpi=300, bbox_inches='tight')
+plt.savefig('Visual/KM_Curves_OS_by_Stage.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 
@@ -1009,6 +1009,6 @@ if age_var and age_var in survival_df.columns:
                 bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='black', linewidth=1))
 
     plt.tight_layout()
-    plt.savefig('Colorectal_Cancer_HE_patches/Visual/KM_Curves_OS_by_Age_Quartiles.png', dpi=300, bbox_inches='tight')
+    plt.savefig('Visual/KM_Curves_OS_by_Age_Quartiles.png', dpi=300, bbox_inches='tight')
     plt.show()
 
