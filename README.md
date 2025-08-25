@@ -208,7 +208,7 @@ features_dir/
       "is_white_patch": false
     }
   ],
-  "timestamp": "2024-01-01T12:00:00"
+  "timestamp": "2025-09-01T12:00:00"
 }
 ```
 
