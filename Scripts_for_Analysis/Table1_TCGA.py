@@ -35,7 +35,7 @@ print(f"Number of patients with mutations: {len(all_burden)}")
 
 # Read features file
 print("\nReading features file...")
-features_df = pd.read_csv("Colorectal_Cancer_HE_patches/TCGA_Features_Complete_WithClinical.csv")
+features_df = pd.read_csv("TCGA_Features_Complete_WithClinical.csv")
 print(f"Features shape: {features_df.shape}")
 
 # Merge burden data
@@ -168,10 +168,9 @@ output_df_sorted['Significance'] = output_df_sorted['P_Value'].apply(
 
 
 # Save results
-output_path = "Colorectal_Cancer_HE_patches/Marginal_Regression_Results.csv"
+output_path = "Marginal_Regression_Results.csv"
 output_df_sorted.to_csv(output_path, index=False)
 print(f"\nMarginal regression results saved to: {output_path}")
-
 
 
 
@@ -314,7 +313,7 @@ try:
             print(f"  {row['Variable']:30} β = {row['Coefficient']:7.4f} {sig:3} (p = {row['P_Value']:.4e})")
     
     # Save joint model results
-    joint_output_path = "Colorectal_Cancer_HE_patches/T_Cells_Distance_Joint_Regression_Results.csv"
+    joint_output_path = "T_Cells_Distance_Joint_Regression_Results.csv"
     joint_df.to_csv(joint_output_path, index=False)
     print(f"\nT cells distance variables joint regression results saved to: {joint_output_path}")
     
