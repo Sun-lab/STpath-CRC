@@ -1,4 +1,4 @@
-# CRC Cell Proportion Predictor
+# STPath_COAD Predictor
 
 A comprehensive tool for predicting cell type proportions in colorectal cancer H&E images using multiple foundation models and XGBoost classifiers.
 
@@ -6,11 +6,11 @@ A comprehensive tool for predicting cell type proportions in colorectal cancer H
 
 This tool combines the power of multiple foundation models (Conch, UNI2h, ProvGigapath, Virchow, Virchow2) with XGBoost classifiers to predict the proportions of 5 different cell types in colorectal cancer H&E images:
 
-- **Cancer Cells**
-- **Stromal Cells** 
-- **Normal Epithelial Cells**
-- **T cells**
-- **Other Immune Cells**
+- **Cancer Cells**: Colorectal Carcinoma-specific cells/Adenoma-specific cells/Serrated-specific cells
+- **Stromal Cells**: Fibroblasts/Endothelial cells 
+- **Normal Epithelial Cells**: Tuft cels/Goblet cells/Enteroendocrine cells/Absorptive colonocytes/Crypt-top colonocytes
+- **T cells**: CD4+ T cells/CD8+ T cells
+- **Other Immune Cells**: B cells/Plasma cells/Myeloid cells/Mast cells
 
 ## Features
 
