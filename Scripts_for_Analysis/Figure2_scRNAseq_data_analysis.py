@@ -30,7 +30,7 @@ import json
 
 
 # Read h5ad data
-scRNAseq_data_path = "data/scRNAseq_data/VUMC_COMBINED.h5ad"
+scRNAseq_data_path = "scRNAseq_data/VUMC_COMBINED.h5ad"
 scData_original = sc.read_h5ad(scRNAseq_data_path)
 
 
@@ -89,7 +89,7 @@ plt.rcParams['axes.titleweight'] = 'bold'
 plt.rcParams['savefig.dpi'] = 600
 plt.rcParams['figure.figsize'] = [8, 8]
 
-sc.settings.figdir = 'data/Colorectal_Cancer_HE_patches/Visual/Sup/'
+sc.settings.figdir = 'Visual/Sup/'
 
 # Create the UMAP plot
 fig, ax = plt.subplots(figsize=(10, 8))
@@ -124,7 +124,7 @@ for spine in ax.spines.values():
     spine.set_color('black')
 
 plt.tight_layout()
-plt.savefig('data/Colorectal_Cancer_HE_patches/Visual/Sup/Sup_scRNAseq-Leiden_UMAP.png', 
+plt.savefig('Visual/Sup/Sup_scRNAseq-Leiden_UMAP.png', 
             dpi=600, bbox_inches='tight')
 plt.show()
 
@@ -163,7 +163,7 @@ for spine in ax.spines.values():
     spine.set_color('black')
 
 plt.tight_layout()
-plt.savefig('data/Colorectal_Cancer_HE_patches/Visual/Sup/Sup_scRNAseq-Previous_Ann_UMAP.png', 
+plt.savefig('Visual/Sup/Sup_scRNAseq-Previous_Ann_UMAP.png', 
             dpi=600, bbox_inches='tight')
 plt.show()
 
@@ -214,7 +214,7 @@ for label in cbar.get_yticklabels():
     label.set_fontweight('bold')
 
 plt.tight_layout()
-plt.savefig('data/Colorectal_Cancer_HE_patches/Visual/Sup/Sup_scRNAseq-CD8A_UMAP.png', 
+plt.savefig('Visual/Sup/Sup_scRNAseq-CD8A_UMAP.png', 
             dpi=600, bbox_inches='tight')
 plt.show()
 
@@ -289,7 +289,7 @@ plt.title('')
 plt.xlabel('')
 plt.ylabel('')
 plt.tight_layout()
-plt.savefig('data/Colorectal_Cancer_HE_patches/Visual/Sup/Sup_CrossTable_DoubleConfirm.png', dpi=600)
+plt.savefig('Visual/Sup/Sup_CrossTable_DoubleConfirm.png', dpi=600)
 plt.show()
 
 
@@ -337,7 +337,7 @@ scData_DoubleConfirmed = scData_Recluster[scData_Recluster.obs_names.isin(double
 scData_DoubleConfirmed.X = X_scData_DoubleConfirmed
 scData_DoubleConfirmed.obs["double_confirmed"] = double_confirmed_df["double_confirmed"]
 
-scData_DoubleConfirmed.write_h5ad('data/scRNAseq_data/scData_DoubleConfirmed.h5ad')
+scData_DoubleConfirmed.write_h5ad('scRNAseq_data/scData_DoubleConfirmed.h5ad')
 
 
 
@@ -346,14 +346,14 @@ scData_DoubleConfirmed.write_h5ad('data/scRNAseq_data/scData_DoubleConfirmed.h5a
 ######### Maker genes finding ##############################################################
 
 
-scData_DoubleConfirmed = sc.read_h5ad('data/scRNAseq_data/scData_DoubleConfirmed.h5ad')
+scData_DoubleConfirmed = sc.read_h5ad('scRNAseq_data/scData_DoubleConfirmed.h5ad')
 
 scData_DoubleConfirmed_Norm = scData_original[scData_DoubleConfirmed.obs_names.tolist(), :].copy()
 scData_DoubleConfirmed_Norm.obs = scData_DoubleConfirmed.obs
 
 InputDf_for_CARD_Original = pd.DataFrame(scData_DoubleConfirmed_Norm.X, index=scData_DoubleConfirmed_Norm.obs_names, columns=scData_DoubleConfirmed_Norm.var_names).T
 
-InputDf_for_CARD_Original.to_csv('data/scRNAseq_data/InputDf_for_CARD_Original.csv')
+InputDf_for_CARD_Original.to_csv('scRNAseq_data/InputDf_for_CARD_Original.csv')
 
 
 sc.pp.normalize_total(scData_DoubleConfirmed_Norm, target_sum=1e4)
@@ -492,7 +492,7 @@ InputDf_for_CARD_SelectedGenes = pd.DataFrame(
     columns=scData_input_for_CARD_SelectedGenes.obs_names  # Cell barcodes as column names
 )
 
-InputDf_for_CARD_SelectedGenes.to_csv('data/scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv')
+InputDf_for_CARD_SelectedGenes.to_csv('scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv')
 
 
 
@@ -502,7 +502,7 @@ InputDf_for_CARD_meta = pd.DataFrame({
 }, index=scData_DoubleConfirmed.obs_names)
 
 
-InputDf_for_CARD_meta.to_csv('data/scRNAseq_data/InputDf_for_CARD_meta.csv')
+InputDf_for_CARD_meta.to_csv('scRNAseq_data/InputDf_for_CARD_meta.csv')
 
 
 
@@ -512,7 +512,7 @@ InputDf_for_CARD_meta.to_csv('data/scRNAseq_data/InputDf_for_CARD_meta.csv')
 
 
 ###### Final Umap ######
-scData_DoubleConfirmed = sc.read_h5ad('data/scRNAseq_data/scData_DoubleConfirmed.h5ad')
+scData_DoubleConfirmed = sc.read_h5ad('scRNAseq_data/scData_DoubleConfirmed.h5ad')
 
 # Extract UMAP coordinates and labels
 umap_coords = scData_DoubleConfirmed.obsm['X_umap']
@@ -577,7 +577,7 @@ ax.set_yticks([])
 
 # Adjust layout and save
 plt.tight_layout()
-plt.savefig('data/Colorectal_Cancer_HE_patches/Visual/Sup_scRNAseq-DoubleConfrim_UMAP.png', dpi=600, bbox_inches='tight')
+plt.savefig('Visual/Sup_scRNAseq-DoubleConfrim_UMAP.png', dpi=600, bbox_inches='tight')
 plt.close()
 
 
@@ -585,7 +585,7 @@ plt.close()
 
 # Check the marker genes for some clusters
   ## Note: double confirmed data is not scaled 
-scData_DoubleConfirmed = sc.read_h5ad('data/scRNAseq_data/scData_DoubleConfirmed.h5ad')
+scData_DoubleConfirmed = sc.read_h5ad('scRNAseq_data/scData_DoubleConfirmed.h5ad')
 scData_DoubleConfirmed_raw = scData_original[scData_DoubleConfirmed.obs_names.tolist(), :]
 scData_DoubleConfirmed_raw.obs = scData_DoubleConfirmed.obs
 scData_DoubleConfirmed_raw.uns = scData_DoubleConfirmed.uns
@@ -628,8 +628,8 @@ for key, value in final_marker_genes_dict.items():
 
 ### Heatmap of selected marker genes
 
-InputDf_for_CARD_meta = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col= 0)
-InputDf_for_CARD_Original = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_Original.csv', index_col=0)
+InputDf_for_CARD_meta = pd.read_csv('scRNAseq_data/InputDf_for_CARD_meta.csv', index_col= 0)
+InputDf_for_CARD_Original = pd.read_csv('scRNAseq_data/InputDf_for_CARD_Original.csv', index_col=0)
 InputDf_for_CARD_Original = InputDf_for_CARD_Original.T
 
 InputDf_for_CARD_LogNorm = np.log2(InputDf_for_CARD_Original.div(InputDf_for_CARD_Original.sum(axis=1), axis=0)*1e4 + 1)
@@ -738,7 +738,7 @@ plt.xticks(label_positions, cell_types, rotation=45, fontsize=17, fontweight='bo
 plt.tight_layout()
 # Adjust subplot position to shift chart to the right
 plt.subplots_adjust(left=0.15, right=0.85, top=0.95, bottom=0.15)
-plt.savefig('data/Colorectal_Cancer_HE_patches/Visual/Heatmap_scRNAseq_marker_genes.png', dpi=600, bbox_inches='tight')
+plt.savefig('Visual/Heatmap_scRNAseq_marker_genes.png', dpi=600, bbox_inches='tight')
 plt.close()
 
 
@@ -1009,9 +1009,9 @@ with open('data/scRNAseq_data/final_marker_genes_dict.json', 'r') as f:
 
 #### Prepare data for deconvolution #########################################################
 
-InputDf_for_CARD_Original = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_Original.csv', index_col=0)
-InputDf_for_CARD_SelectedGenes = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
-InputDf_for_CARD_meta = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
+InputDf_for_CARD_Original = pd.read_csv('scRNAseq_data/InputDf_for_CARD_Original.csv', index_col=0)
+InputDf_for_CARD_SelectedGenes = pd.read_csv('scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
+InputDf_for_CARD_meta = pd.read_csv('scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
 
 
 
@@ -1029,8 +1029,8 @@ del final_marker_genes_dict["Normal Epithelia"]
 
 
 
-InputDf_for_CARD_SelectedGenes = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
-InputDf_for_CARD_meta = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
+InputDf_for_CARD_SelectedGenes = pd.read_csv('scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
+InputDf_for_CARD_meta = pd.read_csv('scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
 InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CD4+ T"] = "T"
 InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CD8+ T"] = "T"
 
@@ -1061,8 +1061,8 @@ for cell_type in InputDf_for_CARD_meta["Cell Type"].unique():
 
 cell_type = "Cancer Cells"
 Region_ID = "6723_KL_1_region0"
-expression_df = pd.read_csv(f'data/CARD_Need_Files/{Region_ID}_expression.csv', index_col=0)
-Celltype_proportion_df = pd.read_csv(f'data/CARD_Results_Regions/{Region_ID}_celltype_proportion_modified.csv', index_col=0)
+expression_df = pd.read_csv(f'CARD_Need_Files/{Region_ID}_expression.csv', index_col=0)
+Celltype_proportion_df = pd.read_csv(f'CARD_Results_Regions/{Region_ID}_celltype_proportion_modified.csv', index_col=0)
 B_matrix_df = pd.read_csv(f'data/CARD_Results_Regions/{Region_ID}_B_Matrix_modified.csv', index_col=0)
         
 cell_type_order = ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I", 
@@ -1127,7 +1127,7 @@ focus_relative_marker_genes_expression = (relative_marker_genes_expression_df_gr
 
 
 
-Spatial_location_df = pd.read_csv('data/CARD_Need_Files/6723_KL_1_region0_spatial.csv', index_col=0)
+Spatial_location_df = pd.read_csv('CARD_Need_Files/6723_KL_1_region0_spatial.csv', index_col=0)
 showcase_df = pd.concat([pd.Series(focus_celltype_percent), pd.Series(focus_relative_marker_genes_expression), Spatial_location_df[["x", "y"]].reset_index(drop=True)], axis=1)
 showcase_df.columns = ["Proportion", "Expression", "x", "y"]
 
@@ -1180,7 +1180,7 @@ plt.ylabel('')
 # Remove ticks
 ax.set_xticks([])
 ax.set_yticks([])
-plt.savefig(f"data/Colorectal_Cancer_HE_patches/Visual/6723_KL_1_region0_Cancer_cells_proportion.png", dpi=600, bbox_inches='tight')
+plt.savefig(f"Visual/6723_KL_1_region0_Cancer_cells_proportion.png", dpi=600, bbox_inches='tight')
 # Show the figure
 plt.show()
 
@@ -1235,7 +1235,7 @@ plt.ylabel('')
 ax.set_xticks([])
 ax.set_yticks([])
 
-plt.savefig(f"data/Colorectal_Cancer_HE_patches/Visual/6723_KL_1_region0_Cancer_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight')
+plt.savefig(f"Visual/6723_KL_1_region0_Cancer_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight')
 plt.show()
 
 
@@ -1249,9 +1249,9 @@ import seaborn as sns
 
 
 
-Celltype_proportion_df_mean_Cody = pd.read_csv('data/CARD_Results_Files/Celltype_proportion_df_mean_Cody.csv', index_col=0)
-Celltype_proportion_df_mean_FH = pd.read_csv('/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Results_Files/Celltype_proportion_df_mean_FH.csv', index_col=0)
-Celltype_proportion_df_mean_HEST = pd.read_csv('data/hest_data/CARD_Results_Files/Celltype_proportion_df_mean_HEST.csv', index_col=0)
+Celltype_proportion_df_mean_Cody = pd.read_csv('CARD_Results_Files/Celltype_proportion_df_mean_Cody.csv', index_col=0)
+Celltype_proportion_df_mean_FH = pd.read_csv('CARD_Results_Files/Celltype_proportion_df_mean_FH.csv', index_col=0)
+Celltype_proportion_df_mean_HEST = pd.read_csv('CARD_Results_Files/Celltype_proportion_df_mean_HEST.csv', index_col=0)
 
 # Fix the total dataframe creation - merge all proportion columns while keeping Cell Type
 # First get the Cell Type column from any of the dataframes (they should all be the same)
@@ -1268,7 +1268,7 @@ all_props = pd.concat([cody_props, fh_props, hest_props], axis=1)
 # Add Cell Type back as the first column
 Celltype_proportion_df_mean_total = pd.concat([cell_types_df, all_props], axis=1)
 
-Celltype_proportion_df_mean_total.to_csv('data/Colorectal_Cancer_HE_patches/Supplementary_File1_CellType_Proportion_Mean.csv')
+Celltype_proportion_df_mean_total.to_csv('Supplementary_File1_CellType_Proportion_Mean.csv')
 
 
 def CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True):
@@ -1474,9 +1474,9 @@ def CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True):
     # show the figure
     plt.tight_layout()
     if group == True:
-        plt.savefig('data/Colorectal_Cancer_HE_patches/Visual/CARD_Results_Vis_Combined_Grouped.png', dpi=600)
+        plt.savefig('Visual/CARD_Results_Vis_Combined_Grouped.png', dpi=600)
     else:
-        plt.savefig('data/Colorectal_Cancer_HE_patches/Visual/CARD_Results_Vis_Combined_Ungrouped.png', dpi=600)
+        plt.savefig('Visual/CARD_Results_Vis_Combined_Ungrouped.png', dpi=600)
     plt.close()
 
 
