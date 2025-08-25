@@ -1,0 +1,26 @@
+# CRC Cell Proportion Predictor Configuration
+# Copy this file to config.yaml and modify the values below
+
+# Required Settings
+huggingface:
+  token: "your_huggingface_token_here"  # Replace with your actual token
+
+models:
+  xgboost_dir: "/path/to/xgboost_models"      # Directory containing XGBoost models
+  features_dir: "/path/to/important_features"  # Directory containing important features files
+
+# Processing Parameters
+processing:
+  patch_size: 240                    # Patch size in pixels (default: 240)
+  device: "auto"                     # Device: "auto", "cpu", "cuda", "mps"
+  white_threshold: 220               # White pixel threshold (default: 220)
+  white_ratio_cutoff: 0.4            # White ratio cutoff (default: 0.4)
+
+# Output Settings
+paths:
+  output_dir: "/path/to/output/results" # Directory for saving results
+
+# Usage:
+# 1. Copy this file to config.yaml
+# 2. Update the paths and token above
+# 3. Run: python CRC_Cell_Proportion_Predictor.py --config config.yaml --image_path your_image.tif
