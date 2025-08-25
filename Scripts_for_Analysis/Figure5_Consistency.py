@@ -439,8 +439,8 @@ if __name__ == "__main__":
     # 6723_KL_1
 
     cell_type = "Cancer Cells"
-    image_path = "/Users/scui2/ST/H&E/6723_KL_1_cropped_scaled.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_6723_out.model"
+    image_path = "H&E/6723_KL_1_cropped_scaled.tif"
+    xgboost_model_path = "xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_6723_out.model"
 
     cancer_6723_KL_1_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
@@ -462,8 +462,8 @@ if __name__ == "__main__":
 
 
     # TENX152
-    image_path = "/Users/scui2/ST/hest_data/wsis/TENX152_Cropped.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
+    image_path = "H&E/TENX152_Cropped.tif"
+    xgboost_model_path = "xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
 
     cancer_TENX152_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
@@ -481,8 +481,8 @@ if __name__ == "__main__":
 
 
     # SH-16-07447
-    image_path = "/Users/scui2/Desktop/FredHutch_Colorectal/H&E_Cropped/SH-16-07447_Cropped.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SH-16-07447_out.model"
+    image_path = "H&E/SH-16-07447_Cropped.tif"
+    xgboost_model_path = "/xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SH-16-07447_out.model"
 
     cancer_SH_16_07447_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
@@ -505,8 +505,8 @@ if __name__ == "__main__":
     ### Stromal Cells
     cell_type = "Stromal Cells"
     # 7003_AS_4
-    image_path = "/Users/scui2/ST/H&E/7003_AS_4_cropped_scaled.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_7003_out.model"
+    image_path = "H&E/7003_AS_4_cropped_scaled.tif"
+    xgboost_model_path = "xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_7003_out.model"
 
     stromal_7003_AS_4_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
@@ -530,8 +530,8 @@ if __name__ == "__main__":
 
 
     # TENX152
-    image_path = "/Users/scui2/ST/hest_data/wsis/TENX152_Cropped.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
+    image_path = "H&E/TENX152_Cropped.tif"
+    xgboost_model_path = "xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
 
     stromal_TENX152_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
@@ -554,8 +554,8 @@ if __name__ == "__main__":
 
 
     # TENX49
-    image_path = "/Users/scui2/ST/hest_data/wsis/TENX49_Cropped.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX49_out.model"
+    image_path = "H&E/TENX49_Cropped.tif"
+    xgboost_model_path = "xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX49_out.model"
 
     stromal_TENX49_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
@@ -581,8 +581,8 @@ if __name__ == "__main__":
     cell_type = "T cells"
     ## SH-17-06138-A1
 
-    image_path = "/Users/scui2/Desktop/FredHutch_Colorectal/H&E_Cropped/SH-17-06138-A1_Cropped.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SH-17-06138-A1_out.model"
+    image_path = "H&E/SH-17-06138-A1_Cropped.tif"
+    xgboost_model_path = "xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SH-17-06138-A1_out.model"
     t_cell_SH_17_06138_A1_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
         image_info_list = create_patches(
@@ -604,8 +604,8 @@ if __name__ == "__main__":
 
     ## SU-15-18753-A1
 
-    image_path = "/Users/scui2/Desktop/FredHutch_Colorectal/H&E_Cropped/SU-15-18753-A1_Cropped.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SU-15-18753-A1_out.model"
+    image_path = "H&E/SU-15-18753-A1_Cropped.tif"
+    xgboost_model_path = "xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SU-15-18753-A1_out.model"
     t_cell_SU_15_18753_A1_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
         image_info_list = create_patches(
@@ -621,8 +621,8 @@ if __name__ == "__main__":
 
 
     ## TENX152
-    image_path = "/Users/scui2/ST/hest_data/wsis/TENX152_Cropped.tif"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
+    image_path = "H&E/TENX152_Cropped.tif"
+    xgboost_model_path = "xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
     t_cell_TENX152_result_dict = {}
     for cut_grid_size in [40, 50, 60, 70, 80, 90, 100]:
         image_info_list = create_patches(
@@ -686,8 +686,8 @@ print(summary_df.head(20))
 print(f"\nDataFrame shape: {summary_df.shape}")
 
 # Save to CSV
-summary_df.to_csv("/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/consistency_analysis_summary.csv", index=False)
-summary_df = pd.read_csv("/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/consistency_analysis_summary.csv")
+summary_df.to_csv("Consistency_Results/consistency_analysis_summary.csv", index=False)
+summary_df = pd.read_csv("Consistency_Results/consistency_analysis_summary.csv")
 
 # Create a new column for the grid size in pixels
 summary_df['Grid_Size_Pixels'] = summary_df['Grid_Size'].str.replace('x.*', '', regex=True).astype(int) * 224
@@ -856,7 +856,7 @@ plt.gca().add_artist(legend1)
 plt.tight_layout()
 
 # Save the plot with extra space for legends
-save_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/consistency_line_chart.png"
+save_path = "Consistency_Results/consistency_line_chart.png"
 plt.savefig(save_path, dpi=600, bbox_inches='tight', pad_inches=0.2)
 print(f"Line chart saved to: {save_path}")
 
@@ -864,50 +864,48 @@ plt.show()
 
 
 
+cancer_6723_KL_1_40x40 = visualize_patches(cancer_6723_KL_1_result_dict[40], "Cancer Cells", save_path="Consistency_Results/cancer_6723_KL_1_40x40.png")
+cancer_6723_KL_1_70x70 = visualize_patches(cancer_6723_KL_1_result_dict[70], "Cancer Cells", save_path="Consistency_Results/cancer_6723_KL_1_70x70.png")
+cancer_6723_KL_1_100x100 = visualize_patches(cancer_6723_KL_1_result_dict[100], "Cancer Cells", save_path="Consistency_Results/cancer_6723_KL_1_100x100.png")
+
+cancer_TENX152_40x40 = visualize_patches(cancer_TENX152_result_dict[40], "Cancer Cells", save_path="Consistency_Results/cancer_TENX152_40x40.png")
+cancer_TENX152_70x70 = visualize_patches(cancer_TENX152_result_dict[70], "Cancer Cells", save_path="Consistency_Results/cancer_TENX152_70x70.png")
+cancer_TENX152_100x100 = visualize_patches(cancer_TENX152_result_dict[100], "Cancer Cells", save_path="Consistency_Results/cancer_TENX152_100x100.png")
+
+cancer_SH_16_07447_40x40 = visualize_patches(cancer_SH_16_07447_result_dict[40], "Cancer Cells", save_path="Consistency_Results/cancer_SH_16_07447_40x40.png")
+cancer_SH_16_07447_70x70 = visualize_patches(cancer_SH_16_07447_result_dict[70], "Cancer Cells", save_path="Consistency_Results/cancer_SH_16_07447_70x70.png")
+cancer_SH_16_07447_100x100 = visualize_patches(cancer_SH_16_07447_result_dict[100], "Cancer Cells", save_path="Consistency_Results/cancer_SH_16_07447_100x100.png")    
 
 
-cancer_6723_KL_1_40x40 = visualize_patches(cancer_6723_KL_1_result_dict[40], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_6723_KL_1_40x40.png")
-cancer_6723_KL_1_70x70 = visualize_patches(cancer_6723_KL_1_result_dict[70], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_6723_KL_1_70x70.png")
-cancer_6723_KL_1_100x100 = visualize_patches(cancer_6723_KL_1_result_dict[100], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_6723_KL_1_100x100.png")
+stromal_7003_AS_4_40x40 = visualize_patches(stromal_7003_AS_4_result_dict[40], "Stromal Cells", save_path="Consistency_Results/stromal_7003_AS_4_40x40.png")
+stromal_7003_AS_4_70x70 = visualize_patches(stromal_7003_AS_4_result_dict[70], "Stromal Cells", save_path="Consistency_Results/stromal_7003_AS_4_70x70.png")
+stromal_7003_AS_4_100x100 = visualize_patches(stromal_7003_AS_4_result_dict[100], "Stromal Cells", save_path="Consistency_Results/stromal_7003_AS_4_100x100.png")
 
-cancer_TENX152_40x40 = visualize_patches(cancer_TENX152_result_dict[40], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_TENX152_40x40.png")
-cancer_TENX152_70x70 = visualize_patches(cancer_TENX152_result_dict[70], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_TENX152_70x70.png")
-cancer_TENX152_100x100 = visualize_patches(cancer_TENX152_result_dict[100], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_TENX152_100x100.png")
+stromal_TENX152_40x40 = visualize_patches(stromal_TENX152_result_dict[40], "Stromal Cells", save_path="Consistency_Results/stromal_TENX152_40x40.png")
+stromal_TENX152_70x70 = visualize_patches(stromal_TENX152_result_dict[70], "Stromal Cells", save_path="Consistency_Results/stromal_TENX152_70x70.png")
+stromal_TENX152_100x100 = visualize_patches(stromal_TENX152_result_dict[100], "Stromal Cells", save_path="Consistency_Results/stromal_TENX152_100x100.png")
 
-cancer_SH_16_07447_40x40 = visualize_patches(cancer_SH_16_07447_result_dict[40], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_SH_16_07447_40x40.png")
-cancer_SH_16_07447_70x70 = visualize_patches(cancer_SH_16_07447_result_dict[70], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_SH_16_07447_70x70.png")
-cancer_SH_16_07447_100x100 = visualize_patches(cancer_SH_16_07447_result_dict[100], "Cancer Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/cancer_SH_16_07447_100x100.png")    
-
-
-stromal_7003_AS_4_40x40 = visualize_patches(stromal_7003_AS_4_result_dict[40], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_7003_AS_4_40x40.png")
-stromal_7003_AS_4_70x70 = visualize_patches(stromal_7003_AS_4_result_dict[70], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_7003_AS_4_70x70.png")
-stromal_7003_AS_4_100x100 = visualize_patches(stromal_7003_AS_4_result_dict[100], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_7003_AS_4_100x100.png")
-
-stromal_TENX152_40x40 = visualize_patches(stromal_TENX152_result_dict[40], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_TENX152_40x40.png")
-stromal_TENX152_70x70 = visualize_patches(stromal_TENX152_result_dict[70], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_TENX152_70x70.png")
-stromal_TENX152_100x100 = visualize_patches(stromal_TENX152_result_dict[100], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_TENX152_100x100.png")
-
-stromal_TENX49_40x40 = visualize_patches(stromal_TENX49_result_dict[40], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_TENX49_40x40.png")
-stromal_TENX49_70x70 = visualize_patches(stromal_TENX49_result_dict[70], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_TENX49_70x70.png")
-stromal_TENX49_100x100 = visualize_patches(stromal_TENX49_result_dict[100], "Stromal Cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/stromal_TENX49_100x100.png")
+stromal_TENX49_40x40 = visualize_patches(stromal_TENX49_result_dict[40], "Stromal Cells", save_path="Consistency_Results/stromal_TENX49_40x40.png")
+stromal_TENX49_70x70 = visualize_patches(stromal_TENX49_result_dict[70], "Stromal Cells", save_path="Consistency_Results/stromal_TENX49_70x70.png")
+stromal_TENX49_100x100 = visualize_patches(stromal_TENX49_result_dict[100], "Stromal Cells", save_path="Consistency_Results/stromal_TENX49_100x100.png")
 
 
-t_cell_SH_17_06138_A1_40x40 = visualize_patches(t_cell_SH_17_06138_A1_result_dict[40], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_SH_17_06138_A1_40x40.png")
-t_cell_SH_17_06138_A1_70x70 = visualize_patches(t_cell_SH_17_06138_A1_result_dict[70], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_SH_17_06138_A1_70x70.png")
-t_cell_SH_17_06138_A1_100x100 = visualize_patches(t_cell_SH_17_06138_A1_result_dict[100], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_SH_17_06138_A1_100x100.png")
+t_cell_SH_17_06138_A1_40x40 = visualize_patches(t_cell_SH_17_06138_A1_result_dict[40], "T cells", save_path="Consistency_Results/t_cell_SH_17_06138_A1_40x40.png")
+t_cell_SH_17_06138_A1_70x70 = visualize_patches(t_cell_SH_17_06138_A1_result_dict[70], "T cells", save_path="Consistency_Results/t_cell_SH_17_06138_A1_70x70.png")
+t_cell_SH_17_06138_A1_100x100 = visualize_patches(t_cell_SH_17_06138_A1_result_dict[100], "T cells", save_path="Consistency_Results/t_cell_SH_17_06138_A1_100x100.png")
 
 
-t_cell_SU_15_18753_A1_40x40 = visualize_patches(t_cell_SU_15_18753_A1_result_dict[40], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_SU_15_18753_A1_40x40.png")
-t_cell_SU_15_18753_A1_70x70 = visualize_patches(t_cell_SU_15_18753_A1_result_dict[70], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_SU_15_18753_A1_70x70.png")
-t_cell_SU_15_18753_A1_100x100 = visualize_patches(t_cell_SU_15_18753_A1_result_dict[100], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_SU_15_18753_A1_100x100.png")
+t_cell_SU_15_18753_A1_40x40 = visualize_patches(t_cell_SU_15_18753_A1_result_dict[40], "T cells", save_path="Consistency_Results/t_cell_SU_15_18753_A1_40x40.png")
+t_cell_SU_15_18753_A1_70x70 = visualize_patches(t_cell_SU_15_18753_A1_result_dict[70], "T cells", save_path="Consistency_Results/t_cell_SU_15_18753_A1_70x70.png")
+t_cell_SU_15_18753_A1_100x100 = visualize_patches(t_cell_SU_15_18753_A1_result_dict[100], "T cells", save_path="Consistency_Results/t_cell_SU_15_18753_A1_100x100.png")
 
 
-t_cell_TENX152_40x40 = visualize_patches(t_cell_TENX152_result_dict[40], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_TENX152_40x40.png")
-t_cell_TENX152_70x70 = visualize_patches(t_cell_TENX152_result_dict[70], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_TENX152_70x70.png")
-t_cell_TENX152_100x100 = visualize_patches(t_cell_TENX152_result_dict[100], "T cells", save_path="/Users/scui2/ST/Colorectal_Cancer_HE_patches/Consistency_Results/t_cell_TENX152_100x100.png")
+t_cell_TENX152_40x40 = visualize_patches(t_cell_TENX152_result_dict[40], "T cells", save_path="Consistency_Results/t_cell_TENX152_40x40.png")
+t_cell_TENX152_70x70 = visualize_patches(t_cell_TENX152_result_dict[70], "T cells", save_path="Consistency_Results/t_cell_TENX152_70x70.png")
+t_cell_TENX152_100x100 = visualize_patches(t_cell_TENX152_result_dict[100], "T cells", save_path="Consistency_Results/t_cell_TENX152_100x100.png")
 
 
-cancer_info = torch.load("/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_features/Cancer Cells_training_precomputed_features_Virchow2.pt")
+cancer_info = torch.load("Training_features/Cancer Cells_training_precomputed_features_Virchow2.pt")
 
 
 # Find true overall cell type proportion
