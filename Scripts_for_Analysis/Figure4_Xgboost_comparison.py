@@ -34,7 +34,7 @@ all_results = []
 for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:
     for model in ["ResNet50", "Conch", "ProvGigapath", "UNI2h", "Virchow", "Virchow2", "Combined"]:
 
-        df = pd.read_csv(f"Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_{model}_individual_level_ratio100/individual_metrics_individual_level.csv")
+        df = pd.read_csv(f"xgboost_prediction/{cell_type}_{model}_individual_level_ratio100/individual_metrics_individual_level.csv")
         
         for index, row in df.iterrows():
             ct_range = row["Max_celltype_proportion"] - row["Min_celltype_proportion"]
@@ -53,7 +53,7 @@ for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T
 
 # Create the final DataFrame
 final_df = pd.DataFrame(all_results)
-final_df.to_csv(f"Colorectal_Cancer_HE_patches/xgboost_prediction/individual_metrics_individual_level_filtered.csv", index=False)
+final_df.to_csv(f"xgboost_prediction/individual_metrics_individual_level_filtered.csv", index=False)
 
 
 
@@ -219,7 +219,7 @@ def normalize_cell_type_proportions(
     unique_target_individuals = sorted(list(set(target_individual_ids)))
     
     # Load important features for combined model
-    important_features = pickle.load(open(f"Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_{target_cell_type}.pkl", "rb"))
+    important_features = pickle.load(open(f"xgboost_prediction/important_features_{target_cell_type}.pkl", "rb"))
     
     # Load all foundation model features for target data
     UNI2h_data = torch.load(os.path.join(input_dir, f'{target_cell_type}_training_precomputed_features_UNI2h.pt'))
@@ -259,7 +259,7 @@ def normalize_cell_type_proportions(
         for cell_type in all_cell_types:
             if cell_type == target_cell_type:
                 # For target cell type, use leave-this-individual-out model
-                model_path = f"Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_Combined_individual_level_ratio100/models/xgboost_model_leave_{target_individual}_out.model"
+                model_path = f"xgboost_prediction/{cell_type}_Combined_individual_level_ratio100/models/xgboost_model_leave_{target_individual}_out.model"
             else:
                 # For other cell types, check if individual exists in their training data
                 other_feature_name = f'{cell_type}_training_precomputed_features_Virchow2.pt'
@@ -270,10 +270,10 @@ def normalize_cell_type_proportions(
                 
                 if target_individual in unique_other_individuals:
                     # Individual exists, use leave-this-individual-out model
-                    model_path = f"Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_Combined_individual_level_ratio100/models/xgboost_model_leave_{target_individual}_out.model"
+                    model_path = f"xgboost_prediction/{cell_type}_Combined_individual_level_ratio100/models/xgboost_model_leave_{target_individual}_out.model"
                 else:
                     # Individual doesn't exist, use external prediction model
-                    model_path = f"Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_Combined_external_prediction/xgboost_model_{cell_type}_Combined_external_prediction.model"
+                    model_path = f"xgboost_prediction/{cell_type}_Combined_external_prediction/xgboost_model_{cell_type}_Combined_external_prediction.model"
             
             # Load and use model for prediction
             model = xgb.Booster()
@@ -429,11 +429,11 @@ metrics_t_cells = evaluation_metrics_calculation(result_t_cells_normalized, "T C
 metrics_other_immune = evaluation_metrics_calculation(result_other_immune_cells_normalized, "Other Immune Cells")
 
 
-metrics_cancer.to_csv("Colorectal_Cancer_HE_patches/xgboost_prediction/Normalized_metrics_cancer.csv", index=False)
-metrics_stromal.to_csv("Colorectal_Cancer_HE_patches/xgboost_prediction/Normalized_metrics_stromal.csv", index=False)
-metrics_normal.to_csv("Colorectal_Cancer_HE_patches/xgboost_prediction/Normalized_metrics_normal.csv", index=False)
-metrics_t_cells.to_csv("Colorectal_Cancer_HE_patches/xgboost_prediction/Normalized_metrics_t_cells.csv", index=False)
-metrics_other_immune.to_csv("Colorectal_Cancer_HE_patches/xgboost_prediction/Normalized_metrics_other_immune.csv", index=False)
+metrics_cancer.to_csv("xgboost_prediction/Normalized_metrics_cancer.csv", index=False)
+metrics_stromal.to_csv("xgboost_prediction/Normalized_metrics_stromal.csv", index=False)
+metrics_normal.to_csv("xgboost_prediction/Normalized_metrics_normal.csv", index=False)
+metrics_t_cells.to_csv("xgboost_prediction/Normalized_metrics_t_cells.csv", index=False)
+metrics_other_immune.to_csv("xgboost_prediction/Normalized_metrics_other_immune.csv", index=False)
 
 
 
@@ -558,7 +558,7 @@ for i, (metric, title) in enumerate(zip(metrics_panel_b, metric_titles_panel_b))
     plt.tight_layout()
     
     # Save the figure
-    plt.savefig(f'Colorectal_Cancer_HE_patches/Visual/training_ratio_{metric}_linechart.png', 
+    plt.savefig(f'Visual/training_ratio_{metric}_linechart.png', 
                 dpi=600, bbox_inches='tight', facecolor='white')
     
     # Show the figure
@@ -572,7 +572,7 @@ for i, (metric, title) in enumerate(zip(metrics_panel_b, metric_titles_panel_b))
 
 
 ### Marker genes refinement
-with open('/Users/scui2/ST/scRNAseq_data/final_marker_genes_dict.json', 'r') as f:
+with open('scRNAseq_data/final_marker_genes_dict.json', 'r') as f:
     final_marker_genes_dict = json.load(f)
 
 del final_marker_genes_dict["Cancer"]
@@ -580,7 +580,7 @@ del final_marker_genes_dict["Normal Epithelia"]
 
 
 
-InputDf_for_CARD_SelectedGenes = pd.read_csv('/Users/scui2/ST/scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
+InputDf_for_CARD_SelectedGenes = pd.read_csv('scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
 InputDf_for_CARD_meta = pd.read_csv('/Users/scui2/ST/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
 InputDf_for_CARD_meta.loc[InputDf_for_CARD_meta["Cell Type"] == "CD4+ T", "Cell Type"] = "T"
 InputDf_for_CARD_meta.loc[InputDf_for_CARD_meta["Cell Type"] == "CD8+ T", "Cell Type"] = "T"
@@ -615,9 +615,9 @@ for cell_type in InputDf_for_CARD_meta["Cell Type"].unique():
 
 ### For Cancer Cells
 cell_type = "Cancer Cells"
-expression_df = pd.read_csv(f'/Users/scui2/ST/CARD_Need_Files/6723_KL_1_region0_expression.csv', index_col=0)
-Celltype_proportion_df = pd.read_csv(f'/Users/scui2/ST/CARD_Results_Regions/6723_KL_1_region0_celltype_proportion_modified.csv', index_col=0)
-B_matrix_df = pd.read_csv(f'/Users/scui2/ST/CARD_Results_Regions/6723_KL_1_region0_B_Matrix_modified.csv', index_col=0)
+expression_df = pd.read_csv(f'CARD_Need_Files/6723_KL_1_region0_expression.csv', index_col=0)
+Celltype_proportion_df = pd.read_csv(f'CARD_Results_Regions/6723_KL_1_region0_celltype_proportion_modified.csv', index_col=0)
+B_matrix_df = pd.read_csv(f'CARD_Results_Regions/6723_KL_1_region0_B_Matrix_modified.csv', index_col=0)
         
 cell_type_order = ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I", 
 "ABS", "CT", "EE", "TUF", "T", "PLA", "MAS", "MYE", "B", "FIB", "END"]
@@ -763,7 +763,7 @@ plt.ylabel('')
 # Remove ticks
 ax.set_xticks([])
 ax.set_yticks([])
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/6723_KL_1_Cancer_cells_deconvoluted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/6723_KL_1_Cancer_cells_deconvoluted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 # show the figure
 plt.show()
 
@@ -818,7 +818,7 @@ plt.ylabel('')
 # Remove ticks
 ax.set_xticks([])
 ax.set_yticks([])
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/6723_KL_1_Cancer_cells_predicted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/6723_KL_1_Cancer_cells_predicted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 # show the figure
 plt.show()
 
@@ -877,7 +877,7 @@ plt.ylabel('')
 ax.set_xticks([])
 ax.set_yticks([])
 
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/TENX152_Cancer_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/TENX152_Cancer_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 plt.show()
 
 
@@ -959,7 +959,7 @@ ax.spines['bottom'].set_color('black')
 plt.tight_layout()
 
 # Save the figure
-plt.savefig('Colorectal_Cancer_HE_patches/Visual/6723_KL_1_Cancer_cells_deconvoluted_vs_predicted_proportion_scatter.png', 
+plt.savefig('Visual/6723_KL_1_Cancer_cells_deconvoluted_vs_predicted_proportion_scatter.png', 
             dpi=600, bbox_inches='tight', facecolor='white')
 
 # Show the figure
@@ -974,9 +974,9 @@ plt.show()
 
 ### For Stromal Cells
 cell_type = "Stromal Cells"
-expression_df = pd.read_csv(f'/Users/scui2/ST/CARD_Need_Files/7003_AS_4_region0_expression.csv', index_col=0)
-Celltype_proportion_df = pd.read_csv(f'/Users/scui2/ST/CARD_Results_Regions/7003_AS_4_region0_celltype_proportion_modified.csv', index_col=0)
-B_matrix_df = pd.read_csv(f'/Users/scui2/ST/CARD_Results_Regions/7003_AS_4_region0_B_Matrix_modified.csv', index_col=0)
+expression_df = pd.read_csv(f'CARD_Need_Files/7003_AS_4_region0_expression.csv', index_col=0)
+Celltype_proportion_df = pd.read_csv(f'CARD_Results_Regions/7003_AS_4_region0_celltype_proportion_modified.csv', index_col=0)
+B_matrix_df = pd.read_csv(f'CARD_Results_Regions/7003_AS_4_region0_B_Matrix_modified.csv', index_col=0)
         
 cell_type_order = ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I", 
 "ABS", "CT", "EE", "TUF", "T", "PLA", "MAS", "MYE", "B", "FIB", "END"]
@@ -1122,7 +1122,7 @@ plt.ylabel('')
 # Remove ticks
 ax.set_xticks([])
 ax.set_yticks([])
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/7003_AS_4_Stromal_cells_deconvoluted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/7003_AS_4_Stromal_cells_deconvoluted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 # show the figure
 plt.show()
 
@@ -1177,7 +1177,7 @@ plt.ylabel('')
 # Remove ticks
 ax.set_xticks([])
 ax.set_yticks([])
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/7003_AS_4_Stromal_cells_predicted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/7003_AS_4_Stromal_cells_predicted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 # show the figure
 plt.show()
 
@@ -1236,7 +1236,7 @@ plt.ylabel('')
 ax.set_xticks([])
 ax.set_yticks([])
 
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/TENX152_Cancer_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/TENX152_Cancer_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 plt.show()
 
 
@@ -1318,7 +1318,7 @@ ax.spines['bottom'].set_color('black')
 plt.tight_layout()
 
 # Save the figure
-plt.savefig('Colorectal_Cancer_HE_patches/Visual/7003_AS_4_Stromal_cells_deconvoluted_vs_predicted_proportion_scatter.png', 
+plt.savefig('Visual/7003_AS_4_Stromal_cells_deconvoluted_vs_predicted_proportion_scatter.png', 
             dpi=600, bbox_inches='tight', facecolor='white')
 
 # Show the figure
@@ -1333,13 +1333,12 @@ plt.show()
 
 ### For T Cells
 cell_type = "T Cells"
-expression_df_region1 = pd.read_csv(f'/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Need_Files/SH-17-06138-A1_region1_expression.csv', index_col=0)
-expression_df_region2 = pd.read_csv(f'/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Need_Files/SH-17-06138-A1_region2_expression.csv', index_col=0)
+expression_df_region1 = pd.read_csv(f'CARD_Need_Files/SH-17-06138-A1_region1_expression.csv', index_col=0)
+expression_df_region2 = pd.read_csv(f'CARD_Need_Files/SH-17-06138-A1_region2_expression.csv', index_col=0)
 
-Celltype_proportion_df_region1 = pd.read_csv(f'/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Results_Regions/SH-17-06138-A1_region1_celltype_proportion_modified.csv', index_col=0)
-Celltype_proportion_df_region2 = pd.read_csv(f'/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Results_Regions/SH-17-06138-A1_region2_celltype_proportion_modified.csv', index_col=0)
-
-B_matrix_df = pd.read_csv(f'/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Results_Regions/SH-17-06138-A1_region1_B_Matrix_modified.csv', index_col=0)
+Celltype_proportion_df_region1 = pd.read_csv(f'CARD_Results_Regions/SH-17-06138-A1_region1_celltype_proportion_modified.csv', index_col=0)
+Celltype_proportion_df_region2 = pd.read_csv(f'CARD_Results_Regions/SH-17-06138-A1_region2_celltype_proportion_modified.csv', index_col=0)
+B_matrix_df = pd.read_csv(f'CARD_Results_Regions/SH-17-06138-A1_region1_B_Matrix_modified.csv', index_col=0)
 
 expression_df = pd.concat([expression_df_region1, expression_df_region2], axis=0)
 Celltype_proportion_df = pd.concat([Celltype_proportion_df_region1, Celltype_proportion_df_region2], axis=0)
@@ -1494,7 +1493,7 @@ plt.ylabel('')
 # Remove ticks
 ax.set_xticks([])
 ax.set_yticks([])
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/SH-17-06138-A1_region1_T_cells_deconvoluted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/SH-17-06138-A1_region1_T_cells_deconvoluted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 # show the figure
 plt.show()
 
@@ -1549,7 +1548,7 @@ plt.ylabel('')
 # Remove ticks
 ax.set_xticks([])
 ax.set_yticks([])
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/SH-17-06138-A1_region1_T_cells_predicted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/SH-17-06138-A1_region1_T_cells_predicted_proportion.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 # show the figure
 plt.show()
 
@@ -1608,7 +1607,7 @@ plt.ylabel('')
 ax.set_xticks([])
 ax.set_yticks([])
 
-plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/SH-17-06138-A1_T_cells_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"Visual/SH-17-06138-A1_T_cells_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight', pad_inches=0.05)
 plt.show()
 
 
@@ -1690,7 +1689,7 @@ ax.spines['bottom'].set_color('black')
 plt.tight_layout()
 
 # Save the figure
-plt.savefig('Colorectal_Cancer_HE_patches/Visual/SH-17-06138-A1_T_cells_deconvoluted_vs_predicted_proportion_scatter.png', 
+plt.savefig('Visual/SH-17-06138-A1_T_cells_deconvoluted_vs_predicted_proportion_scatter.png', 
             dpi=600, bbox_inches='tight', facecolor='white')
 
 # Show the figure
