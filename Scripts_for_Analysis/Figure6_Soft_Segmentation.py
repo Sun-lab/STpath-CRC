@@ -523,13 +523,13 @@ if __name__ == "__main__":
     
     # Efficient processing with multiple thresholds
     thresholds = [0.3, 0.4, 0.5]
-    save_dir = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/Visual"
+    save_dir = "Visual"
     
     ### For Cancer TENX152
     log("=== Processing TENX152 ===")
-    wsi_path = "/Users/scui2/ST/hest_data/wsis/TENX152_Cropped.tif"
+    wsi_path = "H&E/TENX152_Cropped.tif"
     cell_type = "Cancer Cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
+    xgboost_model_path = "xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
@@ -541,9 +541,9 @@ if __name__ == "__main__":
 
     ### For Cancer 6723_KL_1
     log("=== Processing 6723_KL_1 ===")
-    wsi_path = "/Users/scui2/ST/H&E/6723_KL_1_cropped_scaled.tif"
+    wsi_path = "H&E/6723_KL_1_cropped_scaled.tif"
     cell_type = "Cancer Cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_6723_out.model"
+    xgboost_model_path = "xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_6723_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
@@ -555,9 +555,9 @@ if __name__ == "__main__":
     
     ### For Cancer SH-16-07447
     log("=== Processing SH-16-07447 ===")
-    wsi_path = "/Users/scui2/Desktop/FredHutch_Colorectal/H&E_Cropped/SH-16-07447_Cropped.tif"
+    wsi_path = "H&E/SH-16-07447_Cropped.tif"
     cell_type = "Cancer Cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SH-16-07447_out.model"
+    xgboost_model_path = "xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SH-16-07447_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
@@ -573,13 +573,13 @@ if __name__ == "__main__":
 
 
     thresholds = [0.4, 0.5, 0.6]
-    save_dir = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/Visual"
+    save_dir = "Visual"
     
     ### For Stromal 7003_AS_4
     log("=== Processing 7003_AS_4 ===")
-    wsi_path = "/Users/scui2/ST/H&E/7003_AS_4_cropped_scaled.tif"
+    wsi_path = "H&E/7003_AS_4_cropped_scaled.tif"
     cell_type = "Stromal Cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_7003_out.model"
+    xgboost_model_path = "xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_7003_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
@@ -591,9 +591,9 @@ if __name__ == "__main__":
 
     ## For Stromal TENX152
     log("=== Processing TENX152 ===")
-    wsi_path = "/Users/scui2/ST/hest_data/wsis/TENX152_Cropped.tif"
+    wsi_path = "H&E/TENX152_Cropped.tif"
     cell_type = "Stromal Cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
+    xgboost_model_path = "xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
@@ -608,7 +608,7 @@ if __name__ == "__main__":
     log("=== Processing TENX49 ===")
     wsi_path = "/Users/scui2/ST/hest_data/wsis/TENX49_Cropped.tif"
     cell_type = "Stromal Cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX49_out.model"
+    xgboost_model_path = "xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX49_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
@@ -621,17 +621,16 @@ if __name__ == "__main__":
 
 
 if __name__ == "__main__":
-# Example usage for T cells
-
-
+    
+   # Example usage for T cells
     thresholds = [0.15, 0.2, 0.25]
-    save_dir = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/Visual"
+    save_dir = "Visual"
     
     ### For T cells SH-17-06138-A1
     log("=== Processing SH-17-06138-A1 ===")
-    wsi_path = "/Users/scui2/Desktop/FredHutch_Colorectal/H&E_Cropped/SH-17-06138-A1_Cropped.tif"
+    wsi_path = "H&E/SH-17-06138-A1_Cropped.tif"
     cell_type = "T cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SH-17-06138-A1_out.model"
+    xgboost_model_path = "xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SH-17-06138-A1_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
@@ -643,9 +642,9 @@ if __name__ == "__main__":
 
     # For T cells SU-15-18753-A1
     log("=== Processing SU-15-18753-A1 ===")
-    wsi_path = "/Users/scui2/Desktop/FredHutch_Colorectal/H&E_Cropped/SU-15-18753-A1_Cropped.tif"
+    wsi_path = "H&E/SU-15-18753-A1_Cropped.tif"
     cell_type = "T cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SU-15-18753-A1_out.model"
+    xgboost_model_path = "xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_SU-15-18753-A1_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
@@ -659,7 +658,7 @@ if __name__ == "__main__":
     log("=== Processing TENX152 ===")
     wsi_path = "/Users/scui2/ST/hest_data/wsis/TENX152_Cropped.tif"
     cell_type = "T cells"
-    xgboost_model_path = "/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
+    xgboost_model_path = "xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
     
     soft_segmentation_wsi_multiple_thresholds(
         wsi_path=wsi_path,
