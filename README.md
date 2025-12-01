@@ -1,6 +1,6 @@
-# STPath_COAD_Predictor
+# STPath COAD Predictor
 
-A comprehensive tool for predicting cell type proportions in colorectal cancer H&E images using multiple foundation models and XGBoost classifiers.
+A comprehensive tool for predicting cell type proportions or gene expression in colorectal cancer H&E images using multiple foundation models and XGBoost classifiers.
 
 ## Overview
 
@@ -281,8 +281,8 @@ done
 
 ## Citation
 
-If you use this tool in your research, please cite the relevant foundation models and your own work.
+If you use this tool in your research, please cite the relevant foundation models and our work: 
 
-## License
+Saishi Cui, Zhining Sui, Ziyi Li, Wei Sun (2025), Cancer-Specific Fine-Tuning of Histopathology Foundation Models Enables Clinical Translations
 
-This tool is provided for research and clinical use. Please ensure compliance with relevant regulations and ethical guidelines.
+
