@@ -7,7 +7,7 @@ with spatial transcriptomics spots for subsequent analysis. Includes tissue
 segmentation using Otsu thresholding and patch filtering.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Process H&E whole slide images to create patches aligned with spatial
 transcriptomics coordinates, perform tissue segmentation, and prepare data for

@@ -6,7 +6,7 @@ This script prepares CARD deconvolution results for visualization by formatting
 and organizing cell type proportion data.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Process and format CARD deconvolution results for visualization,
 organize cell type proportion data, and prepare files for downstream 

@@ -6,7 +6,7 @@ This script performs comprehensive validation of CARD deconvolution results
 across multiple datasets and conditions with statistical analysis.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Validate and compare CARD deconvolution results across different
 datasets, perform statistical testing, and generate comprehensive validation
@@ -24,15 +24,23 @@ import json
 
 
 ### Marker genes refinement
-with open('data/scRNAseq_data/final_marker_genes_dict.json', 'r') as f:
+with open('/Users/scui2/Desktop/scRNAseq_data/final_marker_genes_dict.json', 'r') as f:
     final_marker_genes_dict = json.load(f)
-
+final_marker_genes_dict.keys()
 del final_marker_genes_dict["Cancer"]
 del final_marker_genes_dict["Normal Epithelia"]
 
+# Rename to COAD_Marker_Genes_Dict and save
+COAD_Marker_Genes_Dict = final_marker_genes_dict
+COAD_Marker_Genes_Dict.keys()
+# Save the renamed dictionary
+with open('/Users/scui2/Desktop/scRNAseq_data/COAD_Marker_Genes_Dict.json', 'w') as f:
+    json.dump(COAD_Marker_Genes_Dict, f, indent=2)
 
-InputDf_for_CARD_SelectedGenes = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
-InputDf_for_CARD_meta = pd.read_csv('data/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
+
+
+InputDf_for_CARD_SelectedGenes = pd.read_csv('/Users/scui2/Desktop/scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
+InputDf_for_CARD_meta = pd.read_csv('/Users/scui2/Desktop/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
 InputDf_for_CARD_meta[InputDf_for_CARD_meta["Cell Type"] == "CD4+ T"] = "T"
 InputDf_for_CARD_meta[InputDf_for_CARD_meta["Cell Type"] == "CD8+ T"] = "T"
 
@@ -59,6 +67,7 @@ for cell_type in InputDf_for_CARD_meta["Cell Type"].unique():
     final_ranked_gene_dict[cell_type] = selected_genes
     print(cell_type, len(final_ranked_gene_dict[cell_type]))
 
+final_ranked_gene_dict.keys()
 
 
 

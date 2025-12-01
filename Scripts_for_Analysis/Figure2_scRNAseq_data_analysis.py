@@ -7,7 +7,7 @@ visualizations for Figure 2. Includes cell type annotation, marker gene identifi
 and UMAP visualization.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Process and analyze scRNA-seq data, perform cell type annotation using 
 multiple strategies, identify marker genes, and create UMAP visualizations for 
@@ -1248,10 +1248,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-
-Celltype_proportion_df_mean_Cody = pd.read_csv('CARD_Results_Files/Celltype_proportion_df_mean_Cody.csv', index_col=0)
-Celltype_proportion_df_mean_FH = pd.read_csv('CARD_Results_Files/Celltype_proportion_df_mean_FH.csv', index_col=0)
-Celltype_proportion_df_mean_HEST = pd.read_csv('CARD_Results_Files/Celltype_proportion_df_mean_HEST.csv', index_col=0)
+Celltype_proportion_df_mean_Cody = pd.read_csv('/Users/scui2/Desktop/CARD_Results_Files/Celltype_proportion_df_mean_Cody.csv', index_col=0)
+Celltype_proportion_df_mean_FH = pd.read_csv('/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Results_Files/Celltype_proportion_df_mean_FH.csv', index_col=0)
+Celltype_proportion_df_mean_HEST = pd.read_csv('/Users/scui2/Desktop/hest_data/CARD_Results_Files/Celltype_proportion_df_mean_HEST.csv', index_col=0)
 
 # Fix the total dataframe creation - merge all proportion columns while keeping Cell Type
 # First get the Cell Type column from any of the dataframes (they should all be the same)
@@ -1290,10 +1289,10 @@ def CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True):
                             'TUF': 'Normal Epithelial',
                             'ABS': 'Normal Epithelial',
                             'T': 'T',
-                            'B': 'Other Immune',
-                            'PLA': 'Other Immune',
-                            'MAS': 'Other Immune',
-                            'MYE': 'Other Immune',
+                            'B': 'pan-APC',
+                            'PLA': 'pan-APC',
+                            'MAS': 'pan-APC',
+                            'MYE': 'pan-APC',
                             'FIB': 'Stromal',
                             'END': 'Stromal'}
         df['Category'] = df['Cell Type'].map(category_mapping)
@@ -1313,7 +1312,7 @@ def CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True):
 
 
     if group == True:
-        cell_type_order = ["Tumor", "Normal Epithelial", "T", "Other Immune", "Stromal"]
+        cell_type_order = ["Tumor", "Normal Epithelial", "T", "pan-APC", "Stromal"]
     else:
         cell_type_order = ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I", "ABS", "CT", "EE", "TUF", "T", "B", "MAS", "MYE", "PLA", "FIB", "END"]
 
@@ -1362,7 +1361,7 @@ def CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True):
                 'Tumor': '#E41A1C',               # red
                 'Normal Epithelial': '#377EB8',    # blue
                 'T': '#4DAF4A',              # green
-                'Other Immune': '#FF7F00',                 # orange
+                'pan-APC': '#FF7F00',                 # orange
                 'Stromal': '#FFFF33',                 # yellow
                   }
 
@@ -1434,7 +1433,7 @@ def CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True):
 
     # set the style of the coordinate axis
     if group == True:
-        plt.gca().xaxis.set_tick_params(labelsize=24, width=3, rotation=13)  # increase font size
+        plt.gca().xaxis.set_tick_params(labelsize=24, width=3, rotation=25)  # increased rotation angle
     else:
         plt.gca().xaxis.set_tick_params(labelsize=22, width=3, rotation=45)  # increase font size
     plt.gca().yaxis.set_tick_params(labelsize=20, width=3)  # increase font size
@@ -1474,9 +1473,9 @@ def CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True):
     # show the figure
     plt.tight_layout()
     if group == True:
-        plt.savefig('Visual/CARD_Results_Vis_Combined_Grouped.png', dpi=600)
+        plt.savefig('/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/CARD_Results_Vis_Combined_Grouped.png', dpi=600)
     else:
-        plt.savefig('Visual/CARD_Results_Vis_Combined_Ungrouped.png', dpi=600)
+        plt.savefig('/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/CARD_Results_Vis_Combined_Ungrouped.png', dpi=600)
     plt.close()
 
 

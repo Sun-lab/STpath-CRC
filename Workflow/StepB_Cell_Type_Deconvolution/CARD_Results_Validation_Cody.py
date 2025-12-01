@@ -6,7 +6,7 @@ This script validates CARD deconvolution results by comparing with known cell ty
 distributions and performs statistical analysis of cell type proportions.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Validate CARD deconvolution results, perform statistical comparisons,
 and generate validation plots for cell type proportion estimates in the 

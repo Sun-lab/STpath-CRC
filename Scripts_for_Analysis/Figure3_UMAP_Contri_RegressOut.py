@@ -6,7 +6,7 @@ This script performs UMAP dimensionality reduction analysis with regression of
 confounding factors for Figure 3. Visualizes feature contributions and corrected embeddings.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Generate UMAP visualizations with contribution analysis, regression corrections,
 and comprehensive feature space analysis for Figure 3 (also Figure S5-S8) of the paper.
@@ -202,14 +202,14 @@ def create_umap_visualizations(data_path, cell_type, foundation_model, legend_on
 for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:     
     create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_ResNet50.pt", cell_type = cell_type, foundation_model = "ResNet50")
     create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_Conch.pt", cell_type = cell_type, foundation_model = "Conch")
-    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_ProvGigapath.pt", cell_type = cell_type, foundation_model = "ProvGigapath")
-    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_UNI2h.pt", cell_type = cell_type, foundation_model = "UNI2h")
+    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_ProvGigapath.pt", cell_type = cell_type, foundation_model = "Prov-GigaPath")
+    create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_UNI2h.pt", cell_type = cell_type, foundation_model = "UNI2-h")
     create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_Virchow.pt", cell_type = cell_type, foundation_model = "Virchow")
     create_umap_visualizations(data_path = f"Training_features/{cell_type}_training_precomputed_features_Virchow2.pt", cell_type = cell_type, foundation_model = "Virchow2")
 
 
 for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:     
-    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_UNI2h.pt", cell_type = cell_type, foundation_model = "UNI2h", legend_on = True, save_dir="Colorectal_Cancer_HE_patches/Visual/UMAPs_legend/")
+    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_UNI2h.pt", cell_type = cell_type, foundation_model = "UNI2-h", legend_on = True, save_dir="Colorectal_Cancer_HE_patches/Visual/UMAPs_legend/")
 
 
 
@@ -384,7 +384,7 @@ def create_umap_visualizations_Xgboost(foundation_model, cell_type, if_legend = 
 
 
 for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:
-    for foundation_model in ["ResNet50", "UNI2h", "Virchow2", "Virchow", "ProvGigapath", "Conch"]:
+    for foundation_model in ["ResNet50", "UNI2-h", "Virchow2", "Virchow", "Prov-GigaPath", "Conch"]:
         create_umap_visualizations_Xgboost(foundation_model = foundation_model, cell_type = cell_type, if_legend = False, dpi = 300)
 
 
@@ -410,7 +410,7 @@ for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T
 def Feature_Importance_Xgboost_Barplot(cell_type):
 
 
-    result_dir = f"Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_Combined_individual_level_ratio100/xgboost_results_individual_level.pt"
+    result_dir = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_Combined_individual_level_ratio100/xgboost_results_individual_level.pt"
     result_data = torch.load(result_dir)
 
 
@@ -448,13 +448,13 @@ def Feature_Importance_Xgboost_Barplot(cell_type):
     # calculate the model contribution
     def which_model(idx):
         if idx_uni2h[0] <= idx < idx_uni2h[1]:
-            return 'UNI2h'
+            return 'UNI2-h'
         elif idx_virchow[0] <= idx < idx_virchow[1]:
             return 'Virchow'
         elif idx_virchow2[0] <= idx < idx_virchow2[1]:
             return 'Virchow2'
         elif idx_provgigapath[0] <= idx < idx_provgigapath[1]:
-            return 'ProvGigapath'
+            return 'Prov-GigaPath'
         elif idx_conch[0] <= idx < idx_conch[1]:
             return 'Conch'
         else:
@@ -477,7 +477,7 @@ def Feature_Importance_Xgboost_Barplot(cell_type):
 
 
     # fix the model order
-    models = ['Conch', 'ProvGigapath', 'UNI2h', 'Virchow', 'Virchow2']
+    models = ['Conch', 'Prov-GigaPath', 'UNI2-h', 'Virchow', 'Virchow2']
 
     # make sure the percentage data is in the same order as the y-axis
     orig = model_percent.reindex(models).values
@@ -525,7 +525,7 @@ def Feature_Importance_Xgboost_Barplot(cell_type):
     ax.spines['left'].set_color('black')
 
     plt.tight_layout()
-    plt.savefig(f"Colorectal_Cancer_HE_patches/Visual/Barplot_Model_Contribution_{cell_type}.png", dpi=600, bbox_inches='tight')
+    plt.savefig(f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/Barplot_Model_Contribution_{cell_type}.png", dpi=600, bbox_inches='tight')
     plt.close()
 
     return feature_importance_df
@@ -549,9 +549,17 @@ def check_feature_statistics():
     Check the numerical range and distribution of features for four foundation models
     """
     # Data paths and model names
-    input_dir = 'Colorectal_Cancer_HE_patches/Training_features'
-    model_names = ["ResNet50", "Conch", "ProvGigapath", "UNI2h", "Virchow", "Virchow2"]
-    
+    input_dir = '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features'
+    model_names = ["ResNet50", "Conch", "Prov-GigaPath", "UNI2-h", "Virchow", "Virchow2"]
+    # Map display names to file names
+    model_file_names = {
+        'ResNet50': 'ResNet50',
+        'Conch': 'Conch', 
+        'Prov-GigaPath': 'ProvGigapath',
+        'UNI2-h': 'UNI2h',
+        'Virchow': 'Virchow',
+        'Virchow2': 'Virchow2'
+    }
     
     feature_stats = {}
     features_data = {}
@@ -562,12 +570,15 @@ def check_feature_statistics():
     for model_name in model_names:
         print(f"\nLoading {model_name} features...")
         
+        # Get the actual file name for this model
+        file_model_name = model_file_names[model_name]
+        
         # Construct file path
-        feature_file_Cancer = f'Cancer Cells_training_precomputed_features_{model_name}.pt'
-        feature_file_Stromal = f'Stromal Cells_training_precomputed_features_{model_name}.pt'
-        feature_file_Normal = f'Normal Epithelial Cells_training_precomputed_features_{model_name}.pt'
-        feature_file_T = f'T Cells_training_precomputed_features_{model_name}.pt'
-        feature_file_Other = f'Other Immune Cells_training_precomputed_features_{model_name}.pt'
+        feature_file_Cancer = f'Cancer Cells_training_precomputed_features_{file_model_name}.pt'
+        feature_file_Stromal = f'Stromal Cells_training_precomputed_features_{file_model_name}.pt'
+        feature_file_Normal = f'Normal Epithelial Cells_training_precomputed_features_{file_model_name}.pt'
+        feature_file_T = f'T Cells_training_precomputed_features_{file_model_name}.pt'
+        feature_file_Other = f'Other Immune Cells_training_precomputed_features_{file_model_name}.pt'
         file_path_Cancer = f"{input_dir}/{feature_file_Cancer}"
         file_path_Stromal = f"{input_dir}/{feature_file_Stromal}"
         file_path_Normal = f"{input_dir}/{feature_file_Normal}"
@@ -797,8 +808,17 @@ features_data, feature_stats, comparison_df = check_feature_statistics()
 
 
 def standardize_features():
-    models = ['ResNet50', 'Conch', 'ProvGigapath', 'UNI2h', 'Virchow', 'Virchow2']
-    input_dir = 'Colorectal_Cancer_HE_patches/Training_features'
+    models = ['ResNet50', 'Conch', 'Prov-GigaPath', 'UNI2-h', 'Virchow', 'Virchow2']
+    # Map display names to file names
+    model_file_names = {
+        'ResNet50': 'ResNet50',
+        'Conch': 'Conch', 
+        'Prov-GigaPath': 'ProvGigapath',
+        'UNI2-h': 'UNI2h',
+        'Virchow': 'Virchow',
+        'Virchow2': 'Virchow2'
+    }
+    input_dir = '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features'
 
 
     standardized_features = {}
@@ -806,12 +826,15 @@ def standardize_features():
     for model in models:
         print(f"Processing {model}...")
         
+        # Get the actual file name for this model
+        file_model_name = model_file_names[model]
+        
         # Load original data
-        data_Cancer = torch.load(f'{input_dir}/Cancer Cells_training_precomputed_features_{model}.pt')
-        data_Stromal = torch.load(f'{input_dir}/Stromal Cells_training_precomputed_features_{model}.pt')
-        data_Normal = torch.load(f'{input_dir}/Normal Epithelial Cells_training_precomputed_features_{model}.pt')
-        data_T = torch.load(f'{input_dir}/T Cells_training_precomputed_features_{model}.pt')
-        data_Other = torch.load(f'{input_dir}/Other Immune Cells_training_precomputed_features_{model}.pt')
+        data_Cancer = torch.load(f'{input_dir}/Cancer Cells_training_precomputed_features_{file_model_name}.pt')
+        data_Stromal = torch.load(f'{input_dir}/Stromal Cells_training_precomputed_features_{file_model_name}.pt')
+        data_Normal = torch.load(f'{input_dir}/Normal Epithelial Cells_training_precomputed_features_{file_model_name}.pt')
+        data_T = torch.load(f'{input_dir}/T Cells_training_precomputed_features_{file_model_name}.pt')
+        data_Other = torch.load(f'{input_dir}/Other Immune Cells_training_precomputed_features_{file_model_name}.pt')
         features_Cancer = data_Cancer['embeddings'].numpy()
         features_Stromal = data_Stromal['embeddings'].numpy()
         features_Normal = data_Normal['embeddings'].numpy()
@@ -858,7 +881,7 @@ def regress_out_features():
     residuals = {}
     regression_results = []
 
-    models = ['ResNet50', 'Conch', 'ProvGigapath', 'UNI2h', 'Virchow', 'Virchow2']
+    models = ['ResNet50', 'Conch', 'Prov-GigaPath', 'UNI2-h', 'Virchow', 'Virchow2']
     for y_model in models:
         Y = standardized_features[y_model]
         
@@ -916,7 +939,7 @@ residuals, regression_results = regress_out_features()
 # Create heatmap of R² values
 
 # Create 4x4 matrix to store R² values
-models = ['ResNet50', 'Conch', 'ProvGigapath', 'UNI2h', 'Virchow', 'Virchow2']
+models = ['ResNet50', 'Conch', 'Prov-GigaPath', 'UNI2-h', 'Virchow', 'Virchow2']
 r2_matrix = np.zeros((6, 6))
 
 # Fill the matrix
@@ -961,8 +984,8 @@ plt.title(f'Foundation Model Complementarity Matrix\n(Lower R² = Higher Complem
 # plt.ylabel('Target Model (Y)', fontsize=14, fontweight='bold')
 
 # Beautify x and y axis ticks and colorbar
-plt.xticks(fontsize=14, fontweight='bold', color='black')
-plt.yticks(fontsize=14, fontweight='bold', color='black')
+plt.xticks(fontsize=14, fontweight='bold', color='black', rotation=45, ha='right')
+plt.yticks(fontsize=14, fontweight='bold', color='black', rotation=45, ha='right')
 cbar = plt.gcf().axes[-1]
 cbar.tick_params(labelsize=18, labelcolor='black')
 for label in cbar.get_yticklabels():
@@ -970,7 +993,7 @@ for label in cbar.get_yticklabels():
 cbar.set_ylabel('R² Score', fontsize=16, fontweight='bold', color='black')
 
 plt.tight_layout()
-plt.savefig('Colorectal_Cancer_HE_patches/Visual/foundation_model_complementarity_matrix.png', dpi=600, bbox_inches='tight')
+plt.savefig('/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/foundation_model_complementarity_matrix.png', dpi=600, bbox_inches='tight')
 plt.close()
 
 

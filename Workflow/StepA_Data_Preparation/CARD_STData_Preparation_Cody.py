@@ -6,7 +6,7 @@ This script prepares spatial transcriptomics data for CARD deconvolution analysi
 by formatting expression matrices and spatial coordinates.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Process and format spatial transcriptomics data for downstream cell type (CARD) 
 deconvolution analysis. Prepares expression matrices and coordinate files 

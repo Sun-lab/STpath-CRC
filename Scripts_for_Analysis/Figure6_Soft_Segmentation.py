@@ -6,7 +6,7 @@ This script performs soft tissue segmentation analysis for spatial transcriptomi
 and generates visualizations for Figure 6. Implements probabilistic segmentation approaches.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Implement and evaluate soft segmentation approaches for tissue region 
 identification in spatial transcriptomics data, generating comprehensive 
@@ -188,7 +188,7 @@ def predict_cell_type_proportions(image_info_list, cell_type, xgboost_model_path
     ])
     
     # Load important features
-    important_features_path = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_{cell_type}.pkl"
+    important_features_path = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_{cell_type}.pkl"
     log(f"Loading important features from {important_features_path}")
     important_features = pickle.load(open(important_features_path, "rb"))
     
@@ -606,7 +606,7 @@ if __name__ == "__main__":
 
     ## For Stromal TENX49
     log("=== Processing TENX49 ===")
-    wsi_path = "/Users/scui2/ST/hest_data/wsis/TENX49_Cropped.tif"
+    wsi_path = "/Users/scui2/Desktop/hest_data/wsis/TENX49_Cropped.tif"
     cell_type = "Stromal Cells"
     xgboost_model_path = "xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX49_out.model"
     
@@ -656,7 +656,7 @@ if __name__ == "__main__":
 
     # For T cells TENX152
     log("=== Processing TENX152 ===")
-    wsi_path = "/Users/scui2/ST/hest_data/wsis/TENX152_Cropped.tif"
+    wsi_path = "/Users/scui2/Desktop/hest_data/wsis/TENX152_Cropped.tif"
     cell_type = "T cells"
     xgboost_model_path = "xgboost_prediction/T cells_Combined_individual_level_ratio100/models/xgboost_model_leave_TENX152_out.model"
     

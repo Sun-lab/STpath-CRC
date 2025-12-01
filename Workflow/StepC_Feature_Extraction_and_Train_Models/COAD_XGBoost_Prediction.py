@@ -6,7 +6,7 @@ This script trains XGBoost models for predicting cell type proportions in colore
 H&E patches using features extracted from multiple foundation models.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Train and evaluate XGBoost models for cell type proportion prediction using
 both tile-level and individual-level cross-validation strategies. Supports feature
@@ -24,6 +24,7 @@ from tqdm import tqdm
 import xgboost as xgb
 from datetime import datetime
 from scipy import stats
+from scipy.optimize import minimize
 from matplotlib.patches import Patch
 from umap import UMAP
 from matplotlib.lines import Line2D
@@ -33,11 +34,293 @@ from joblib import Parallel, delayed
 import pickle
 
 
+def calibrate_predictions(y_true, y_pred, cell_type, n_quantiles=100, outlier_percentile=99.5):
+    """
+    Calibrate model predictions using global quantile mapping with linear interpolation.
+    For certain cell types (T Cells, Other Immune Cells, Normal Epithelial Cells),
+    first preprocess true proportions by removing outliers and scaling.
+    
+    Preprocessing steps (for specific cell types):
+    1. Remove outliers: Keep only values <= outlier_percentile (default 99.5%)
+    2. Scale: Divide all values by the max (99.5th percentile value)
+    3. Apply quantile mapping on processed data
+    
+    This method:
+    1. Computes n_quantiles percentiles of both y_pred and y_true_processed
+    2. Creates a lookup table mapping y_pred quantiles to y_true_processed quantiles
+    3. For new predictions, uses linear interpolation (np.interp) between quantile points
+    
+    Args:
+        y_true: True cell type proportions (deconvoluted) - can be torch tensor or numpy array
+        y_pred: Raw model predictions - can be torch tensor or numpy array
+        cell_type: Name of cell type (determines if preprocessing is needed)
+        n_quantiles: Number of quantiles to store (default: 100, i.e., percentiles)
+        outlier_percentile: Percentile threshold for outlier removal (default: 99.5)
+    
+    Returns:
+        tuple: (lookup_table, calibrated_predictions, y_true_processed)
+        - lookup_table: Dict with quantile info and scaling parameters
+        - calibrated_predictions: Calibrated values for current data
+        - y_true_processed: Processed true values (for plotting)
+    """
+    
+    # Convert torch tensors to numpy if needed
+    if torch.is_tensor(y_true):
+        y_true = y_true.cpu().numpy()
+    if torch.is_tensor(y_pred):
+        y_pred = y_pred.cpu().numpy()
+    
+    # Ensure numpy arrays
+    y_true_original = np.asarray(y_true).flatten()
+    y_pred_original = np.asarray(y_pred).flatten()
+    
+    print(f"  Original data: {len(y_true_original)} samples")
+    print(f"  Pred range: [{y_pred_original.min():.4f}, {y_pred_original.max():.4f}]")
+    print(f"  True range: [{y_true_original.min():.4f}, {y_true_original.max():.4f}]")
+    
+    # Check if this cell type needs true proportion preprocessing
+    needs_preprocessing = cell_type in ["T Cells", "Other Immune Cells", "Normal Epithelial Cells"]
+    
+    if needs_preprocessing:
+        print(f"\n  🔧 Preprocessing TRUE proportions for {cell_type}:")
+        
+        # Step 1: Remove top 0.5% outliers (keep bottom 99.5%)
+        outlier_threshold = np.percentile(y_true_original, outlier_percentile)
+        mask = y_true_original < outlier_threshold  # Strict inequality to remove exactly top 0.5%
+        removed_count = np.sum(~mask)
+        
+        print(f"     ① Outlier removal: Remove top {100-outlier_percentile}%")
+        print(f"        Threshold (99.5th percentile): {outlier_threshold:.4f}")
+        print(f"        Removed {removed_count} outliers (≥{outlier_threshold:.4f})")
+        
+        # Apply mask to both arrays
+        y_true_filtered = y_true_original[mask]
+        y_pred_filtered = y_pred_original[mask]
+        
+        # Step 2: Find max value in the REMAINING 99.5% data and use it as scaling factor
+        max_in_remaining = y_true_filtered.max()
+        scale_factor = max_in_remaining
+        y_true_scaled = y_true_filtered / scale_factor
+        
+        print(f"     ② Scaling: max in remaining 99.5% data = {max_in_remaining:.4f}")
+        print(f"        Scale factor = {scale_factor:.4f}")
+        print(f"        Scaled TRUE range: [{y_true_scaled.min():.4f}, {y_true_scaled.max():.4f}]")
+        print(f"        Samples after preprocessing: {len(y_true_scaled)}")
+        
+        # Use processed data for calibration
+        y_true_for_calibration = y_true_scaled
+        y_pred_for_calibration = y_pred_filtered
+        
+        scaling_info = {
+            'needs_preprocessing': True,
+            'outlier_threshold': outlier_threshold,
+            'scale_factor': scale_factor,
+            'max_in_remaining': max_in_remaining,
+            'removed_count': removed_count,
+            'original_samples': len(y_true_original),
+            'filtered_samples': len(y_true_scaled),
+            'outlier_percentile': outlier_percentile
+        }
+    else:
+        print(f"  ℹ️  No preprocessing for {cell_type}")
+        y_true_for_calibration = y_true_original
+        y_pred_for_calibration = y_pred_original
+        scaling_info = {'needs_preprocessing': False}
+    
+    print(f"\n  Using global quantile mapping with {n_quantiles} quantiles")
+    
+    # Compute quantiles
+    quantile_levels = np.linspace(0, 100, n_quantiles)
+    y_pred_quantiles = np.percentile(y_pred_for_calibration, quantile_levels)
+    y_true_quantiles = np.percentile(y_true_for_calibration, quantile_levels)
+    
+    # Create lookup table
+    lookup_table = {
+        'y_pred_quantiles': y_pred_quantiles,
+        'y_true_quantiles': y_true_quantiles,
+        'quantile_levels': quantile_levels,
+        'scaling_info': scaling_info,
+        'calibration_method': 'quantile_mapping'
+    }
+    
+    print(f"  Lookup table:")
+    print(f"    y_pred range: [{y_pred_quantiles[0]:.4f}, {y_pred_quantiles[-1]:.4f}]")
+    print(f"    y_true range: [{y_true_quantiles[0]:.4f}, {y_true_quantiles[-1]:.4f}]")
+    
+    # Apply calibration to ORIGINAL full y_pred (with linear interpolation)
+    calibrated_predictions = np.interp(y_pred_original, y_pred_quantiles, y_true_quantiles)
+    calibrated_predictions = np.clip(calibrated_predictions, 0, 1)
+    
+    n_clipped = np.sum((calibrated_predictions == 0) | (calibrated_predictions == 1))
+    if n_clipped > 0:
+        print(f"  Clipped: {n_clipped} values ({n_clipped/len(y_pred_original)*100:.1f}%)")
+    
+    print(f"  ✅ Calibration completed")
+    
+    return lookup_table, calibrated_predictions, y_true_for_calibration
 
+
+def plot_calibration_scatter(y_true, y_pred_raw, y_pred_calibrated, y_true_processed,
+                            calibration_table=None, dummy=None, output_path=None, model_name=None, cell_type=None):
+    """
+    Create 2x2 plots:
+    - Top-left: Raw predicted vs Raw true
+    - Top-right: Raw predicted vs Calibrated true (scaled/processed)
+    - Bottom-left: Calibrated predicted vs Calibrated true
+    - Bottom-right: Calibration curve (quantile mapping visualization)
+    
+    Args:
+        y_true: Original true cell type proportions
+        y_pred_raw: Raw model predictions
+        y_pred_calibrated: Calibrated predictions
+        y_true_processed: Processed true proportions (scaled/filtered for certain cell types)
+        calibration_table: The lookup table with quantile info
+        dummy: Placeholder for compatibility
+        output_path: Path to save the plot
+        model_name: Name of the model
+        cell_type: Cell type name
+    """
+    
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy import stats
+    from scipy.stats import spearmanr, pearsonr
+    from sklearn.metrics import mean_absolute_error, mean_squared_error
+    
+    # Handle processed data
+    # If no preprocessing was done, y_true_processed is the same as y_true
+    scaling_info = calibration_table.get('scaling_info', {'needs_preprocessing': False})
+    needs_preprocessing = scaling_info.get('needs_preprocessing', False)
+    
+    if needs_preprocessing:
+        # Need to filter y_pred and y_true to match y_true_processed
+        outlier_threshold = scaling_info['outlier_threshold']
+        mask = y_true <= outlier_threshold
+        y_pred_filtered = y_pred_raw[mask]
+        y_true_filtered = y_true[mask]
+        
+        # Scale true values
+        scale_factor = scaling_info['scale_factor']
+        y_true_scaled = y_true_filtered / scale_factor
+    else:
+        y_pred_filtered = y_pred_raw
+        y_true_scaled = y_true
+        y_true_filtered = y_true
+    
+    # Create 1x3 subplot layout
+    fig, axes = plt.subplots(1, 3, figsize=(24, 7))
+    
+    x_line = np.array([0, 1])
+    
+    ##########################################################################
+    ### Left: Raw predicted vs Raw true
+    ##########################################################################
+    ax = axes[0]
+    mae1 = mean_absolute_error(y_true, y_pred_raw)
+    rmse1 = np.sqrt(mean_squared_error(y_true, y_pred_raw))
+    spearman1, _ = spearmanr(y_true, y_pred_raw)
+    pearson1, _ = pearsonr(y_true, y_pred_raw)
+    slope1, intercept1, r1, _, _ = stats.linregress(y_true, y_pred_raw)
+    
+    ax.scatter(y_true, y_pred_raw, alpha=0.4, s=10, color='blue', edgecolor='none')
+    ax.plot([0, 1], [0, 1], 'k--', linewidth=2, alpha=0.7, label='Identity')
+    ax.plot(x_line, intercept1 + slope1 * x_line, 'r-', linewidth=2, alpha=0.7, label='Fit')
+    
+    textstr1 = f'MAE: {mae1:.4f}\nRMSE: {rmse1:.4f}\n'
+    textstr1 += f'Spearman: {spearman1:.4f}\nPearson: {pearson1:.4f}\n'
+    textstr1 += f'Slope: {slope1:.4f}\nR²: {r1**2:.4f}'
+    ax.text(0.05, 0.95, textstr1, transform=ax.transAxes, fontsize=11, 
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
+    ax.set_xlabel('Raw True Proportion', fontsize=13, fontweight='bold')
+    ax.set_ylabel('Raw Predicted Proportion', fontsize=13, fontweight='bold')
+    ax.set_title(f'(A) Raw Predicted vs Raw True\n{model_name} - {cell_type}', fontsize=14, fontweight='bold')
+    ax.set_xlim(-0.05, 1.05)
+    ax.set_ylim(-0.05, 1.05)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=10, loc='lower right')
+    
+    ##########################################################################
+    ### Middle: Raw predicted vs Calibrated (scaled) true
+    ##########################################################################
+    ax = axes[1]
+    mae2 = mean_absolute_error(y_true_scaled, y_pred_filtered)
+    rmse2 = np.sqrt(mean_squared_error(y_true_scaled, y_pred_filtered))
+    spearman2, _ = spearmanr(y_true_scaled, y_pred_filtered)
+    pearson2, _ = pearsonr(y_true_scaled, y_pred_filtered)
+    slope2, intercept2, r2, _, _ = stats.linregress(y_true_scaled, y_pred_filtered)
+    
+    ax.scatter(y_true_scaled, y_pred_filtered, alpha=0.4, s=10, color='green', edgecolor='none')
+    ax.plot([0, 1], [0, 1], 'k--', linewidth=2, alpha=0.7, label='Identity')
+    ax.plot(x_line, intercept2 + slope2 * x_line, 'r-', linewidth=2, alpha=0.7, label='Fit')
+    
+    textstr2 = f'MAE: {mae2:.4f}\nRMSE: {rmse2:.4f}\n'
+    textstr2 += f'Spearman: {spearman2:.4f}\nPearson: {pearson2:.4f}\n'
+    textstr2 += f'Slope: {slope2:.4f}\nR²: {r2**2:.4f}'
+    if needs_preprocessing:
+        textstr2 += f'\n\n✂️ Outliers removed\n📏 Scaled by {scaling_info["scale_factor"]:.4f}'
+    ax.text(0.05, 0.95, textstr2, transform=ax.transAxes, fontsize=11,
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
+    
+    ax.set_xlabel('Calibrated True Proportion', fontsize=13, fontweight='bold')
+    ax.set_ylabel('Raw Predicted Proportion', fontsize=13, fontweight='bold')
+    ax.set_title(f'(B) Raw Predicted vs Calibrated True\n{model_name} - {cell_type}', fontsize=14, fontweight='bold')
+    ax.set_xlim(-0.05, 1.05)
+    ax.set_ylim(-0.05, 1.05)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=10, loc='lower right')
+    
+    ##########################################################################
+    ### Right: Quantile Mapping Curve (100 points connected by lines)
+    ##########################################################################
+    ax = axes[2]
+    
+    if calibration_table is not None:
+        # Get the quantile points
+        y_pred_quantiles = calibration_table['y_pred_quantiles']
+        y_true_quantiles = calibration_table['y_true_quantiles']
+        
+        # Plot the quantile mapping as a line connecting points
+        ax.plot(y_pred_quantiles, y_true_quantiles, 'b-o', linewidth=2, markersize=4, 
+                alpha=0.7, label='Quantile Mapping')
+        
+        # Plot identity line
+        ax.plot([0, 1], [0, 1], 'k--', linewidth=2, alpha=0.7, label='Identity')
+        
+        # Add text info
+        n_quantiles = len(y_pred_quantiles)
+        textstr_qm = f'Quantile Mapping\n'
+        textstr_qm += f'{n_quantiles} quantiles\n'
+        textstr_qm += f'Linear interpolation\n\n'
+        textstr_qm += f'y_pred range:\n[{y_pred_quantiles[0]:.4f}, {y_pred_quantiles[-1]:.4f}]\n\n'
+        textstr_qm += f'y_true range:\n[{y_true_quantiles[0]:.4f}, {y_true_quantiles[-1]:.4f}]'
+        
+        if scaling_info.get('needs_preprocessing', False):
+            textstr_qm += f'\n\n✂️ Preprocessing applied'
+        
+        ax.text(0.05, 0.95, textstr_qm, transform=ax.transAxes, fontsize=11,
+                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.8))
+        
+        ax.set_xlabel('Raw Predicted Proportion', fontsize=13, fontweight='bold')
+        ax.set_ylabel('Calibrated Predicted Proportion', fontsize=13, fontweight='bold')
+        ax.set_title(f'(C) Quantile Mapping Curve\n{model_name} - {cell_type}', fontsize=14, fontweight='bold')
+        ax.set_xlim(-0.05, 1.05)
+        ax.set_ylim(-0.05, 1.05)
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=10, loc='lower right')
+    else:
+        ax.text(0.5, 0.5, 'Calibration table not available', 
+                ha='center', va='center', fontsize=14, transform=ax.transAxes)
+    
+    plt.suptitle(f'Calibration Analysis: {cell_type}', fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"    Calibration plot (1x3) saved: {output_path}")
 
 
 ### Train XGBoost model with leave-some-out cross-validation
-### 2 levels: tile, individual
 
 
 def train_xgboost_tile_level(
@@ -376,7 +659,8 @@ def train_xgboost_individual_level(
     # Load feature data
     if if_combined:
         # Load important features dictionary
-        important_features = pickle.load(open(f"Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_{cell_type}.pkl", "rb"))
+        important_features_path = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_{cell_type}.pkl"
+        important_features = pickle.load(open(important_features_path, "rb"))
         
         UNI2h_feature_name = f'{cell_type}_training_precomputed_features_UNI2h.pt'
         Virchow_feature_name = f'{cell_type}_training_precomputed_features_Virchow.pt'
@@ -558,8 +842,25 @@ def train_xgboost_individual_level(
     overall_spearman, _ = spearmanr(labels, all_predictions)
     overall_pearson, _ = pearsonr(labels, all_predictions)
     
-    print("\nOverall metrics:")
+    print("\nOverall metrics (raw predictions):")
     print(f"  MAE={overall_mae:.4f}, RMSE={overall_rmse:.4f}, Spearman={overall_spearman:.4f}, Pearson={overall_pearson:.4f}")
+    
+    # Perform calibration
+    print(f"\n{'='*80}")
+    print(f"Performing cross-model calibration")
+    print(f"{'='*80}\n")
+    
+    calibration_table, calibrated_predictions, labels_processed = calibrate_predictions(labels, all_predictions, cell_type)
+    
+    # Calculate metrics for calibrated predictions
+    cal_mae = mean_absolute_error(labels, calibrated_predictions)
+    cal_rmse = np.sqrt(mean_squared_error(labels, calibrated_predictions))
+    cal_spearman, _ = spearmanr(labels, calibrated_predictions)
+    cal_pearson, _ = pearsonr(labels, calibrated_predictions)
+    
+    print("\nOverall metrics (calibrated predictions):")
+    print(f"  MAE={cal_mae:.4f}, RMSE={cal_rmse:.4f}, Spearman={cal_spearman:.4f}, Pearson={cal_pearson:.4f}")
+    print(f"  Improvement: MAE Δ={overall_mae-cal_mae:+.4f}, RMSE Δ={overall_rmse-cal_rmse:+.4f}")
     
     # Only save files if save_files is True
     if save_files:
@@ -593,10 +894,43 @@ def train_xgboost_individual_level(
         # Save overall scatter plot
         plt.savefig(os.path.join(output_dir, 'overall_performance_individual_level.png'), dpi=300)
         plt.close()
+        
+        # Create and save calibration comparison plot
+        print("\nCreating calibration comparison plot...")
+        calibration_plot_path = os.path.join(output_dir, 'calibration_comparison.png')
+        plot_calibration_scatter(
+            y_true=labels,
+            y_pred_raw=all_predictions,
+            y_pred_calibrated=calibrated_predictions,
+            y_true_processed=labels_processed,
+            calibration_table=calibration_table,
+            dummy=None,
+            output_path=calibration_plot_path,
+            model_name=model_name,
+            cell_type=cell_type
+        )
+        
+        # Save detailed tile-level predictions to CSV (Most important output!)
+        print("\nSaving detailed tile-level predictions CSV...")
+        tile_predictions_df = pd.DataFrame({
+            'tile_id': tile_ids,
+            'sample_id': sample_ids,
+            'individual_id': individual_ids,
+            'deconvoluted_proportion': labels,
+            'predicted_proportion_raw': all_predictions,
+            'predicted_proportion_calibrated': calibrated_predictions
+        })
+        
+        tile_predictions_csv_path = os.path.join(output_dir, 'tile_level_predictions_detailed.csv')
+        tile_predictions_df.to_csv(tile_predictions_csv_path, index=False)
+        print(f"Tile-level predictions saved to: {tile_predictions_csv_path}")
+        print(f"  Total tiles: {len(tile_predictions_df):,}")
+        print(f"  Columns: {', '.join(tile_predictions_df.columns)}")
     
     # Prepare results dictionary
     results = {
         'predictions': all_predictions,
+        'predictions_calibrated': calibrated_predictions,
         'labels': labels,
         'tile_ids': tile_ids,
         'individual_ids': individual_ids,
@@ -614,6 +948,13 @@ def train_xgboost_individual_level(
             'overall_rmse': overall_rmse,
             'overall_spearman': overall_spearman,
             'overall_pearson': overall_pearson,
+        },
+        'calibration': {
+            'lookup_table': calibration_table,
+            'calibrated_mae': cal_mae,
+            'calibrated_rmse': cal_rmse,
+            'calibrated_spearman': cal_spearman,
+            'calibrated_pearson': cal_pearson
         },
         'individual_metrics': fold_metrics,
         'average_metrics': average_metrics
@@ -784,7 +1125,6 @@ for model in ["Resnet50", 'UNI2h', 'Virchow', 'Virchow2', 'ProvGigapath', 'Conch
 
 
 
-
 for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:
     model = "Combined"
     for training_data_ratio in [0.2, 0.4, 0.6, 0.8, 1.0]:
@@ -865,7 +1205,8 @@ def train_xgboost_for_external_prediction(
     if if_combined:
         # Load important features dictionary
         # Convert cell_type spaces to underscores for file naming
-        important_features = pickle.load(open(f"Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_{cell_type}.pkl", "rb"))
+        important_features_path = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_{cell_type}.pkl"
+        important_features = pickle.load(open(important_features_path, "rb"))
         
         UNI2h_feature_name = f'{cell_type}_training_precomputed_features_UNI2h.pt'
         Virchow_feature_name = f'{cell_type}_training_precomputed_features_Virchow.pt'
@@ -976,14 +1317,274 @@ def train_xgboost_for_external_prediction(
 
 
 if __name__ == "__main__":
-    for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:
-        results = train_xgboost_for_external_prediction(
-            input_dir='Colorectal_Cancer_HE_patches/Training_features',
+    
+    ##############################################################################
+    ### STAGE 1: Training - Train models and save .model files and tile CSVs
+    ##############################################################################
+    
+    CELL_TYPES = ["Stromal Cells", "Cancer Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]
+    BASE_OUTPUT_DIR = '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction_with_calibration'
+    INPUT_DIR = '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features'
+    
+    print(f"\n{'#'*80}")
+    print(f"STAGE 1: XGBoost Model Training")
+    print(f"Cell Types: {CELL_TYPES}")
+    print(f"Output Directory: {BASE_OUTPUT_DIR}")
+    print(f"{'#'*80}\n")
+    
+    # Train models for all 5 cell types
+    for idx, cell_type in enumerate(CELL_TYPES):
+        print(f"\n{'='*80}")
+        print(f"Training Cell Type {idx+1}/{len(CELL_TYPES)}: {cell_type}")
+        print(f"{'='*80}\n")
+        
+        # Set cell-type specific output directory
+        cell_type_folder = cell_type.replace(" ", "_")
+        output_dir = f"{BASE_OUTPUT_DIR}/{cell_type_folder}_Combined_individual_level"
+        
+        # Train with individual-level cross-validation
+        results = train_xgboost_individual_level(
+            input_dir=INPUT_DIR,
             cell_type=cell_type,
             model_name='Combined',
-            output_dir=None,
-            params=None,
+            output_dir=output_dir,
+            params=None,  # Use default optimized params
             num_boost_round=800,
             seed=42,
-            if_combined=True
+            if_combined=True,
+            training_data_ratio=1.0,  # Use 100% training data
+            save_files=True
         )
+        
+        print(f"\n✅ Completed: {cell_type}")
+        print(f"   📁 Output: {output_dir}")
+        print(f"   📊 Raw MAE: {results['metrics']['overall_mae']:.4f}")
+        print(f"   📊 Calibrated MAE: {results['calibration']['calibrated_mae']:.4f}")
+    
+    print(f"\n{'#'*80}")
+    print(f"✅ STAGE 1 COMPLETED: All models trained!")
+    print(f"📁 Results saved in: {BASE_OUTPUT_DIR}")
+    print(f"   - Model files (.model)")
+    print(f"   - Tile-level prediction CSVs")
+    print(f"{'#'*80}\n")
+    
+    
+    ##############################################################################
+    ### STAGE 2: Calibration - Apply calibration and save .pkl and plots
+    ##############################################################################
+    
+    print(f"\n{'#'*80}")
+    print(f"STAGE 2: Applying Quantile Mapping Calibration")
+    print(f"{'#'*80}\n")
+    
+    BASE_DIR = '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction_with_calibration'
+    
+    CALIBRATION_CELL_TYPES = [
+        "Cancer Cells",
+        "Stromal Cells", 
+        "Normal Epithelial Cells",
+        "T Cells",
+        "Other Immune Cells"
+    ]
+    
+    for cell_type in CALIBRATION_CELL_TYPES:
+        print(f"\n{'='*80}")
+        print(f"Calibrating: {cell_type}")
+        print(f"{'='*80}")
+        
+        # Construct path
+        cell_type_dir_name = cell_type.replace(" ", "_") + "_Combined_individual_level"
+        cell_type_dir = os.path.join(BASE_DIR, cell_type_dir_name)
+        csv_path = os.path.join(cell_type_dir, "tile_level_predictions_detailed.csv")
+        
+        if not os.path.exists(csv_path):
+            print(f"⚠️  File not found: {csv_path}")
+            continue
+        
+        # Read CSV
+        print(f"\n📂 Reading: {csv_path}")
+        df = pd.read_csv(csv_path)
+        print(f"   Loaded {len(df):,} tiles")
+        
+        # Extract data
+        y_true = df['deconvoluted_proportion'].values
+        y_pred_raw = df['predicted_proportion_raw'].values
+        
+        # Apply quantile mapping calibration
+        calibration_table, y_pred_calibrated, y_true_processed = calibrate_predictions(y_true, y_pred_raw, cell_type)
+        
+        # Calculate calibration metrics
+        cal_mae = mean_absolute_error(y_true, y_pred_calibrated)
+        cal_rmse = np.sqrt(mean_squared_error(y_true, y_pred_calibrated))
+        cal_spearman, _ = spearmanr(y_true, y_pred_calibrated)
+        cal_pearson, _ = pearsonr(y_true, y_pred_calibrated)
+        
+        # Save calibration parameters (lookup table for external use)
+        calibration_data = {
+            'lookup_table': calibration_table,
+            'raw_mae': mean_absolute_error(y_true, y_pred_raw),
+            'raw_rmse': np.sqrt(mean_squared_error(y_true, y_pred_raw)),
+            'calibrated_mae': cal_mae,
+            'calibrated_rmse': cal_rmse,
+            'calibrated_spearman': cal_spearman,
+            'calibrated_pearson': cal_pearson
+        }
+        
+        calib_params_path = os.path.join(cell_type_dir, 'calibration_parameters.pkl')
+        with open(calib_params_path, 'wb') as f:
+            pickle.dump(calibration_data, f)
+        print(f"✅ Calibration parameters saved: {calib_params_path}")
+        print(f"   - Quantile mapping lookup table (for external data)")
+        
+        # Save calibrated predictions CSV
+        df['predicted_proportion_calibrated'] = y_pred_calibrated
+        output_csv = os.path.join(cell_type_dir, "tile_level_predictions_calibrated.csv")
+        df.to_csv(output_csv, index=False)
+        print(f"💾 Calibrated CSV saved: {output_csv}")
+        
+        # Generate calibration comparison plot
+        output_plot = os.path.join(cell_type_dir, "calibration_comparison.png")
+        plot_calibration_scatter(
+            y_true=y_true,
+            y_pred_raw=y_pred_raw,
+            y_pred_calibrated=y_pred_calibrated,
+            y_true_processed=y_true_processed,
+            calibration_table=calibration_table,
+            dummy=None,
+            output_path=output_plot,
+            model_name="Combined",
+            cell_type=cell_type
+        )
+        
+        # Generate additional scatter plot: y_true vs y_calibrated
+        print(f"\n📈 Creating y_true vs y_calibrated scatter plot...")
+        
+        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+        
+        # Scatter plot
+        ax.scatter(y_true, y_pred_calibrated, alpha=0.5, s=15, color='blue', edgecolor='none')
+        
+        # Identity line
+        ax.plot([0, 1], [0, 1], 'k--', linewidth=2, alpha=0.7, label='Identity (y=x)')
+        
+        # Fit line
+        from scipy import stats
+        slope, intercept, r_value, p_value, std_err = stats.linregress(y_true, y_pred_calibrated)
+        x_line = np.array([0, 1])
+        ax.plot(x_line, intercept + slope * x_line, 'r-', linewidth=2, alpha=0.7, label='Fit line')
+        
+        # Calculate metrics
+        mae = mean_absolute_error(y_true, y_pred_calibrated)
+        rmse = np.sqrt(mean_squared_error(y_true, y_pred_calibrated))
+        spearman_corr, _ = spearmanr(y_true, y_pred_calibrated)
+        pearson_corr, _ = pearsonr(y_true, y_pred_calibrated)
+        
+        # Add text box with metrics
+        textstr = f'MAE: {mae:.4f}\n'
+        textstr += f'RMSE: {rmse:.4f}\n'
+        textstr += f'Spearman: {spearman_corr:.4f}\n'
+        textstr += f'Pearson: {pearson_corr:.4f}\n'
+        textstr += f'Slope: {slope:.4f}\n'
+        textstr += f'R²: {r_value**2:.4f}\n'
+        textstr += f'n: {len(y_true):,}'
+        
+        ax.text(0.05, 0.95, textstr, transform=ax.transAxes,
+                fontsize=12, verticalalignment='top',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        
+        # Labels and styling
+        ax.set_xlabel('True Cell Type Proportion (y_true)', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Calibrated Predicted Proportion (y_calibrated)', fontsize=14, fontweight='bold')
+        ax.set_title(f'Calibrated Predictions vs Ground Truth\n{cell_type} - Quantile Mapping Calibration', 
+                     fontsize=16, fontweight='bold')
+        ax.set_xlim(-0.05, 1.05)
+        ax.set_ylim(-0.05, 1.05)
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=11, loc='lower right')
+        ax.tick_params(labelsize=12, width=2)
+        for spine in ax.spines.values():
+            spine.set_linewidth(2)
+        
+        plt.tight_layout()
+        
+        output_scatter = os.path.join(cell_type_dir, "y_true_vs_y_calibrated_scatter.png")
+        plt.savefig(output_scatter, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"   ✅ Scatter plot saved: {output_scatter}")
+        
+        # Print summary
+        raw_mae = mean_absolute_error(y_true, y_pred_raw)
+        
+        print(f"\n📊 Calibration Summary:")
+        print(f"   Raw MAE:        {raw_mae:.6f}")
+        print(f"   Calibrated MAE: {cal_mae:.6f}")
+        print(f"   Improvement:    {((raw_mae - cal_mae) / raw_mae * 100):.2f}%")
+    
+    print(f"\n{'#'*80}")
+    print(f"✅ STAGE 2 COMPLETED: All calibrations done!")
+    print(f"📁 Outputs in each cell type folder:")
+    print(f"   - calibration_parameters.pkl (lookup table)")
+    print(f"   - calibration_comparison.png (visualization)")
+    print(f"   - tile_level_predictions_calibrated.csv")
+    print(f"{'#'*80}\n")
+    
+    
+    ##############################################################################
+    ### Inspect Calibration Parameters (Cancer Cells Example)
+    ##############################################################################
+    
+    print(f"\n{'#'*80}")
+    print(f"📦 Inspecting Calibration Parameters: Cancer Cells")
+    print(f"{'#'*80}\n")
+    
+    pkl_path = '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction_with_calibration/Cancer_Cells_Combined_individual_level/calibration_parameters.pkl'
+    
+    with open(pkl_path, 'rb') as f:
+        calib_params = pickle.load(f)
+    
+    print(f"📋 Keys in calibration_parameters.pkl:")
+    for key in calib_params.keys():
+        print(f"   - {key}")
+    
+    print(f"\n{'='*80}")
+    print(f"📊 Lookup Table Details:")
+    print(f"{'='*80}")
+    
+    lookup = calib_params['lookup_table']
+    print(f"\nLookup table keys: {list(lookup.keys())}")
+    
+    for key, value in lookup.items():
+        if isinstance(value, np.ndarray):
+            print(f"\n🔹 {key}:")
+            print(f"   Shape: {value.shape}")
+            print(f"   Dtype: {value.dtype}")
+            print(f"   Range: [{value.min():.6f}, {value.max():.6f}]")
+            print(f"   First 10 values: {value[:10]}")
+            print(f"   Last 10 values: {value[-10:]}")
+        else:
+            print(f"\n🔹 {key}: {value}")
+    
+    print(f"\n{'='*80}")
+    print(f"📈 Performance Metrics:")
+    print(f"{'='*80}")
+    
+    print(f"\n🔴 Raw Predictions:")
+    print(f"   MAE:  {calib_params.get('raw_mae', 'N/A'):.6f}")
+    print(f"   RMSE: {calib_params.get('raw_rmse', 'N/A'):.6f}")
+    
+    print(f"\n🟢 Calibrated Predictions:")
+    print(f"   MAE:      {calib_params.get('calibrated_mae', 'N/A'):.6f}")
+    print(f"   RMSE:     {calib_params.get('calibrated_rmse', 'N/A'):.6f}")
+    print(f"   Spearman: {calib_params.get('calibrated_spearman', 'N/A'):.6f}")
+    print(f"   Pearson:  {calib_params.get('calibrated_pearson', 'N/A'):.6f}")
+    
+    raw_mae = calib_params.get('raw_mae', 0)
+    cal_mae = calib_params.get('calibrated_mae', 0)
+    if raw_mae > 0:
+        improvement = ((raw_mae - cal_mae) / raw_mae * 100)
+        print(f"\n✨ MAE Improvement: {improvement:.2f}%")
+    
+    print(f"\n{'#'*80}")
+    print(f"✅ Inspection Complete!")
+    print(f"{'#'*80}\n")

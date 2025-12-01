@@ -6,7 +6,7 @@ This script extracts features from histopathology patches using multiple foundat
 including Conch, ProvGigapath, UNI2h, Virchow, and Virchow2 for colorectal cancer analysis.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Extract and precompute features from colorectal cancer H&E patches using various
 foundation models to enable downstream cell type proportion prediction.
@@ -199,9 +199,9 @@ def create_training_features_Conch(cell_types_list):
     # loop through each cell type
     for cell_type in cell_types_list:
         print(cell_type)
-        img_dir = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
-        csv_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
-        output_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Conch.pt"
+        img_dir = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
+        csv_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
+        output_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Conch.pt"
         if len(os.listdir(img_dir)) == 0:
             log(f"the image directory for {cell_type} is empty, skip the precomputation")
             continue
@@ -281,9 +281,9 @@ def create_training_features_UNI2h(cell_types_list):
     # loop through each cell type
     for cell_type in cell_types_list:
         print(cell_type)
-        img_dir = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
-        csv_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
-        output_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_UNI2h.pt"
+        img_dir = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
+        csv_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
+        output_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_UNI2h.pt"
         if len(os.listdir(img_dir)) == 0:
             log(f"the image directory for {cell_type} is empty, skip the precomputation")
             continue
@@ -363,9 +363,9 @@ def create_training_features_ProvGigapath(cell_types_list):
     # loop through each cell type
     for cell_type in cell_types_list:
         print(cell_type)
-        img_dir = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
-        csv_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
-        output_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_ProvGigapath.pt"
+        img_dir = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
+        csv_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
+        output_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_ProvGigapath.pt"
         if len(os.listdir(img_dir)) == 0:
             log(f"the image directory for {cell_type} is empty, skip the precomputation")
             continue
@@ -442,9 +442,9 @@ def create_training_features_Virchow(cell_types_list):
     # loop through each cell type
     for cell_type in cell_types_list:
         print(cell_type)
-        img_dir = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
-        csv_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
-        output_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Virchow.pt"
+        img_dir = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
+        csv_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
+        output_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Virchow.pt"
         if len(os.listdir(img_dir)) == 0:
             log(f"the image directory for {cell_type} is empty, skip the precomputation")
             continue
@@ -524,9 +524,9 @@ def create_training_features_Virchow2(cell_types_list):
     # loop through each cell type
     for cell_type in cell_types_list:
         print(cell_type)
-        img_dir = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
-        csv_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
-        output_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Virchow2.pt"
+        img_dir = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
+        csv_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
+        output_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_Virchow2.pt"
         if len(os.listdir(img_dir)) == 0:
             log(f"the image directory for {cell_type} is empty, skip the precomputation")
             continue
@@ -611,9 +611,9 @@ def create_training_features_ResNet50(cell_types_list):
     
     for cell_type in cell_types_list:
         print(cell_type)
-        img_dir = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
-        csv_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
-        output_file = f"/Users/scui2/ST/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_ResNet50.pt"
+        img_dir = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_tiles/{cell_type}"
+        csv_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_celltype_proportion/{cell_type}_celltype_proportion_combined.csv"
+        output_file = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_ResNet50.pt"
         if len(os.listdir(img_dir)) == 0:
             log(f"the image directory for {cell_type} is empty, skip the precomputation")
             continue

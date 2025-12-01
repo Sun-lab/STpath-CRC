@@ -6,7 +6,7 @@ This script converts TCGA DICOM format histopathology images to TIFF format
 for downstream analysis. Filters and processes only relevant pathology slides.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Convert TCGA DICOM histopathology files to TIFF format, filter out
 non-pathological slides, and prepare data for STPath-COAD analysis pipeline.

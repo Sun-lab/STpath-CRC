@@ -1,288 +1,315 @@
-# STPath_COAD_Predictor
+# STPath-COAD: Spatial Transcriptomics Pathology for Colorectal Cancer
 
-A comprehensive tool for predicting cell type proportions in colorectal cancer H&E images using multiple foundation models and XGBoost classifiers.
+A comprehensive computational framework for predicting cell type proportions in colorectal cancer H&E images using multiple foundation models and machine learning approaches.
 
 ## Overview
 
-This tool combines the power of multiple foundation models (Conch, UNI2h, ProvGigapath, Virchow, Virchow2) with XGBoost classifiers to predict the proportions of 5 different cell types in colorectal cancer H&E images:
+This repository contains the complete analysis pipeline and scripts for the STPath-COAD project. The framework integrates multiple histopathology foundation models with XGBoost classifiers to predict spatial distributions of cell types in colorectal cancer tissues, validated against spatial transcriptomics data.
 
-- **Cancer Cells**: Colorectal Carcinoma-specific cells/Adenoma-specific cells/Serrated-specific cells
-- **Stromal Cells**: Fibroblasts/Endothelial cells 
-- **Normal Epithelial Cells**: Tuft cels/Goblet cells/Enteroendocrine cells/Absorptive colonocytes/Crypt-top colonocytes
-- **T cells**: CD4+ T cells/CD8+ T cells
-- **Other Immune Cells**: B cells/Plasma cells/Myeloid cells/Mast cells
+## Key Features
 
-## Features
+- **Multi-modal Foundation Models**: Integration of 6 state-of-the-art histopathology foundation models (ResNet50, Conch, UNI2-h, ProvGigaPath, Virchow, Virchow2)
+- **Cell Type Deconvolution**: Spatial transcriptomics-guided cell type prediction for 5 major cell populations
+- **TCGA Analysis**: Comprehensive survival analysis and clinical correlation studies
+- **Cross-validation Framework**: Leave-one-individual-out (LOIO) validation strategy
+- **Visualization Tools**: Hexagonal heatmaps, UMAP embeddings, and soft segmentation
 
-- **Flexible patch size**: Configurable patch size (default: 240x240 pixels)
-- **Automatic device detection**: Automatically uses the best available device (CPU, CUDA, or MPS)
-- **White patch filtering**: Automatically excludes patches that are too white (likely background)
-- **Multiple output formats**: Results saved in both JSON and CSV formats
-- **Batch processing**: Process multiple images efficiently
-- **Comprehensive logging**: Detailed progress tracking and error reporting
+## Cell Type Classification
+
+The framework predicts proportions for 5 merged cell types:
+
+1. **Cancer Cells**: Colorectal carcinoma, adenoma, and serrated-specific cells
+2. **Stromal Cells**: Cancer-associated fibroblasts (CAFs) and endothelial cells
+3. **Normal Epithelial Cells**: Goblet cells, absorptive colonocytes, enteroendocrine cells, tuft cells
+4. **T Cells**: CD4+ and CD8+ T lymphocytes
+5. **Other Immune Cells**: B cells, plasma cells, myeloid cells (pan-APC)
+
+## Repository Structure
+
+```
+STPath_COAD/
+├── Scripts_for_Analysis/          # Scripts for generating manuscript figures
+│   ├── Figure2_scRNAseq_data_analysis.py
+│   ├── Figure3_UMAP_Contri_RegressOut.py
+│   ├── Figure4_Xgboost_comparison.py
+│   ├── Figure5_Consistency.py
+│   ├── Figure6_Soft_Segmentation.py
+│   ├── Figure7_TCGA_COAD_Survival.py
+│   ├── FigureS7_TCGA_COAD_Analysis.py
+│   ├── FigureS10_expression_prediction.py
+│   ├── FigureS11_Cell_Type_Distribution_Analysis.py
+│   ├── FigureS13_Compare_BRCA_COAD_Feature_Importance.py
+│   ├── Table1_TCGA.py
+│   └── Sup_file_S3_Make_Important_Features.py
+│
+├── Workflow/                      # Complete analysis workflow
+│   ├── StepA_Data_Preparation/
+│   │   ├── CARD_STData_Preparation_*.py
+│   │   └── Create_patches_images_*.py
+│   │
+│   ├── StepB_Cell_Type_Deconvolution/
+│   │   ├── CARD_Deconvolution_*.R
+│   │   ├── CARD_Results_Validation_*.py
+│   │   └── CARD_Results_Vis_Prepare_*.py
+│   │
+│   ├── StepC_Feature_Extraction_and_Train_Models/
+│   │   ├── Precompute_Features_Using_Foundation_Models_COAD.py
+│   │   ├── COAD_XGBoost_Prediction.py
+│   │   ├── COAD_XGBoost_WithinSample.py
+│   │   └── Compare_TIFF_JPG_Features.py
+│   │
+│   └── StepD_TCGA_Data_Preparation/
+│       └── TCGA_COAD_DCM_to_TIFF.py
+│
+├── Figures/                       # Manuscript figures and supplementary figures
+├── config_template.yaml           # Configuration template
+├── README.md                      # This file
+└── LICENSE                        # License information
+```
+
+## Workflow Overview
+
+### Step A: Data Preparation
+- Prepare spatial transcriptomics data for CARD deconvolution
+- Extract H&E image patches at matched spatial locations
+- Supports Cody, FredHutch, and HEST-1K datasets
+
+### Step B: Cell Type Deconvolution
+- Run CARD deconvolution using single-cell reference data
+- Validate deconvolution results against known tissue regions
+- Generate visualization of cell type spatial distributions
+
+### Step C: Feature Extraction & Model Training
+- Extract features using 6 foundation models
+- Train XGBoost models with LOIO cross-validation
+- Evaluate model performance and feature importance
+- Generate calibrated predictions
+
+### Step D: TCGA Data Processing
+- Convert TCGA whole slide images from DCM to TIFF format
+- Process TCGA-COAD cohort for validation studies
+- Calculate distance metrics between cell types
+- Perform survival analysis
 
 ## Requirements
 
-### Python Dependencies
+### Software Dependencies
 ```
-torch
-timm
-conch
-huggingface_hub
-xgboost
-PIL (Pillow)
-numpy
-pandas
-tqdm
+Python 3.8+
+R 4.0+ (for CARD deconvolution)
+
+Python packages:
+- torch
+- timm
+- conch
+- huggingface_hub
+- xgboost
+- numpy
+- pandas
+- matplotlib
+- seaborn
+- scanpy
+- lifelines
+- scipy
+- scikit-learn
+- umap-learn
+- tqdm
+- pillow
+- opencv-python
+
+R packages:
+- CARD
+- Seurat
 ```
 
 ### Hardware Requirements
-- **Minimum**: CPU with 8GB RAM
-- **Recommended**: GPU with CUDA support or Apple Silicon with MPS support
-- **Storage**: At least 10GB free space for models and temporary files
+- **Recommended**: GPU with 16GB+ VRAM (for foundation model feature extraction)
+- **Minimum**: CPU with 32GB RAM
+- **Storage**: 100GB+ for models, data, and intermediate results
 
-### Required Files
-1. **HuggingFace Token**: For accessing foundation models
-2. **XGBoost Models**: 5 trained XGBoost models (one for each cell type)
-3. **Important Features Files**: 5 pickle files containing important feature indices for each cell type
-4. **H&E Images**: Whole slide images in common formats (.tif, .tiff, .jpg, .jpeg, .png)
+### Data Requirements
+1. **Spatial Transcriptomics Data**: Spot-level gene expression and spatial coordinates
+2. **Single-cell Reference**: Annotated scRNA-seq data for CARD deconvolution
+3. **H&E Images**: Whole slide images or tissue regions
+4. **TCGA Data** (optional): For validation and survival analysis
 
-## Installation
+## Getting Started
 
-1. Clone or download the repository
-2. Install required dependencies:
+### 1. Environment Setup
+
 ```bash
-pip install torch timm conch huggingface_hub xgboost pillow numpy pandas tqdm
+# Create conda environment
+conda create -n stpath python=3.9
+conda activate stpath
+
+# Install Python dependencies
+pip install torch torchvision torchaudio
+pip install timm transformers huggingface_hub
+pip install xgboost scikit-learn
+pip install numpy pandas matplotlib seaborn
+pip install scanpy lifelines
+pip install umap-learn tqdm pillow opencv-python
 ```
 
-## Usage
+### 2. Configuration
 
-### Quick Start with YAML Configuration
-
-1. **Copy and edit the configuration template:**
+Copy and edit the configuration template:
 ```bash
 cp config_template.yaml config.yaml
 ```
 
-2. **Edit the configuration file:**
-```yaml
-# config.yaml
-huggingface:
-  token: "your_huggingface_token_here"
+Edit paths and parameters according to your data location and computing resources.
 
-models:
-  xgboost_dir: "STPath_COAD_Models_v1.0/Trained_Models"
-  features_dir: "STPath_COAD_Models_v1.0/Important_Features"
+### 3. Running the Analysis
 
-processing:
-  patch_size: 240
-  device: "auto"
-  white_threshold: 220
-  white_ratio_cutoff: 0.4
-
-paths:
-  output_dir: "/path/to/output/results"
-```
-
-3. **Run the predictor:**
+#### Complete Workflow
 ```bash
-python STPath_COAD_Predictor.py --config config.yaml --image_path /path/to/your/image.tif
+# Step A: Data preparation
+python Workflow/StepA_Data_Preparation/CARD_STData_Preparation_Cody.py
+
+# Step B: Cell type deconvolution (in R)
+Rscript Workflow/StepB_Cell_Type_Deconvolution/CARD_Deconvolution_Cody.R
+
+# Step C: Feature extraction and model training
+python Workflow/StepC_Feature_Extraction_and_Train_Models/Precompute_Features_Using_Foundation_Models_COAD.py
+python Workflow/StepC_Feature_Extraction_and_Train_Models/COAD_XGBoost_Prediction.py
+
+# Step D: TCGA analysis
+python Workflow/StepD_TCGA_Data_Preparation/TCGA_COAD_DCM_to_TIFF.py
+python Scripts_for_Analysis/FigureS7_TCGA_COAD_Analysis.py
+python Scripts_for_Analysis/Figure7_TCGA_COAD_Survival.py
 ```
 
-### Command Line Override
-
-You can also override any configuration value via command line:
-
+#### Generate Manuscript Figures
 ```bash
-python STPath_COAD_Predictor.py \
-    --config config.yaml \
-    --image_path /path/to/your/image.tif \
-    --patch_size 320 \
-    --device cuda
+# Main figures
+python Scripts_for_Analysis/Figure2_scRNAseq_data_analysis.py
+python Scripts_for_Analysis/Figure3_UMAP_Contri_RegressOut.py
+python Scripts_for_Analysis/Figure4_Xgboost_comparison.py
+python Scripts_for_Analysis/Figure5_Consistency.py
+python Scripts_for_Analysis/Figure6_Soft_Segmentation.py
+python Scripts_for_Analysis/Figure7_TCGA_COAD_Survival.py
+
+# Supplementary figures and tables
+python Scripts_for_Analysis/FigureS7_TCGA_COAD_Analysis.py
+python Scripts_for_Analysis/FigureS10_expression_prediction.py
+python Scripts_for_Analysis/FigureS11_Cell_Type_Distribution_Analysis.py
+python Scripts_for_Analysis/Table1_TCGA.py
 ```
 
-#### Parameters:
-- `--config`: Path to YAML configuration file
-- `--image_path`: Path to the H&E image file (overrides config)
-- `--hf_token`: HuggingFace token (overrides config)
-- `--model_dir`: XGBoost models directory (overrides config)
-- `--features_dir`: Features directory (overrides config)
-- `--output_path`: Output path (overrides config)
-- `--patch_size`: Patch size in pixels (overrides config)
-- `--device`: Device to use (overrides config)
-- `--white_threshold`: White pixel threshold (overrides config)
-- `--white_ratio_cutoff`: White ratio cutoff (overrides config)
+## Key Analyses
 
-### Python API
+### Foundation Model Comparison
+- Systematic comparison of 6 foundation models (Figure 4)
+- Feature importance analysis across models
+- Model complementarity assessment
 
-For more advanced usage, you can use the Python API:
+### Spatial Analysis
+- Cell type distance calculations using weighted minimum distance
+- Hard classification based on quantile thresholds
+- Hexagonal heatmap visualization
 
-```python
-from STPath_COAD_Predictor import STPath_COAD_Predictor
-import yaml
+### Survival Analysis
+- Cox proportional hazards models
+- Kaplan-Meier survival curves
+- Integration of cell type proportions, spatial metrics, and clinical variables
 
-# Load configuration
-with open('config.yaml', 'r') as f:
-    config = yaml.safe_load(f)
+### Gene Expression Prediction
+- Correlation between histopathology features and gene expression
+- Cell type-specific marker gene analysis
+- Partial correlation controlling for cell type composition
 
-# Initialize predictor
-predictor = STPath_COAD_Predictor(
-    hf_token=config['huggingface']['token'],
-    patch_size=config['processing']['patch_size'],
-    device=config['processing']['device'],
-    white_threshold=config['processing']['white_threshold'],
-    white_ratio_cutoff=config['processing']['white_ratio_cutoff']
-)
+## Model Training Strategy
 
-# Load models
-predictor.load_foundation_models()
-predictor.load_xgboost_models(model_paths, important_features_paths)
+### Leave-One-Individual-Out (LOIO) Cross-Validation
+- Each individual (patient) is held out once as test set
+- Models trained on all other individuals
+- Ensures generalization across patients
+- Prevents overfitting to individual-specific patterns
 
-# Run prediction
-results = predictor.predict_image("path/to/image.tif", "path/to/output")
+### Calibration
+- Quantile-based calibration for improved prediction accuracy
+- Cell type-specific outlier handling
+- Preservation of rank ordering while adjusting scale
 
-# Check the overall cell type proportions
-overall_proportions = predictor.get_overall_proportions(results)
-print(overall_proportions)
-```
+### Feature Selection
+- Top 30% most important features selected per model
+- Combined feature set from multiple foundation models
+- Reduces dimensionality while maintaining predictive power
 
+## Output Files
 
+### Model Predictions
+- CSV files with patch-level predictions
+- JSON files with metadata and overall proportions
+- Feature importance scores
 
+### Visualizations
+- UMAP embeddings colored by various factors
+- Hexagonal heatmaps for spatial distributions
+- Violin plots for cell type proportions
+- Scatter plots for model comparisons
+- Kaplan-Meier survival curves
 
+### Statistical Results
+- Cox regression tables
+- Model performance metrics (Spearman correlation, MAE, RMSE)
+- Feature importance rankings
 
+## Performance Metrics
 
+### Model Evaluation
+- **Spearman Correlation**: Primary metric for proportion prediction
+- **Mean Absolute Error (MAE)**: Absolute prediction error
+- **Root Mean Squared Error (RMSE)**: Squared error magnitude
 
+### Typical Performance (LOIO validation)
+- Cancer Cells: ρ = 0.75-0.85
+- Stromal Cells: ρ = 0.70-0.80
+- T Cells: ρ = 0.60-0.70
+- Other cell types: ρ = 0.55-0.70
 
+## Computational Resources
 
-## File Structure
+### Processing Time
+- **Feature Extraction**: ~2-5 minutes per WSI (GPU)
+- **Model Training**: ~30-60 minutes per cell type (LOIO)
+- **Prediction**: ~1-3 minutes per WSI
+- **TCGA Analysis**: ~10-20 minutes per sample
 
-### Required Model Files
-
-Your model directory should contain:
-```
-model_dir/
-├── xgboost_model_Cancer Cells_Combined_external_prediction.model
-├── xgboost_model_Normal Epithelial Cells_Combined_external_prediction.model
-├── xgboost_model_T Cells_Combined_external_prediction.model
-├── xgboost_model_Stromal Cells_Combined_external_prediction.model
-└── xgboost_model_Other Immune Cells_Combined_external_prediction.model
-```
-
-### Required Feature Files
-
-Your features directory should contain:
-```
-features_dir/
-├── important_features_Cancer Cells.pkl
-├── important_features_Stromal Cells.pkl
-├── important_features_Normal Epithelial Cells.pkl
-├── important_features_T cells.pkl
-└── important_features_Other Immune Cells.pkl
-```
-
-### Example Output Structure
-```json
-{
-  "image_path": "/path/to/image.tif",
-  "patch_size": 240,
-  "device": "cuda:0",
-  "total_patches": 1000,
-  "valid_patches": 850,
-  "white_patches": 150,
-  "cell_types": ["Cancer Cells", "Stromal Cells", ...],
-  "predictions": [
-    {
-      "patch_id": "row000_col000",
-      "row": 0,
-      "col": 0,
-      "x_start": 0,
-      "y_start": 0,
-      "x_end": 240,
-      "y_end": 240,
-      "cancer_proportion": 0.25,
-      "stromal_proportion": 0.35,
-      "normal_epithelia_proportion": 0.20,
-      "tcells_proportion": 0.15,
-      "other_immune_proportion": 0.05,
-      "normalized_proportions": [0.25, 0.35, 0.20, 0.15, 0.05],
-      "is_white_patch": false
-    }
-  ],
-  "timestamp": "2025-09-01T12:00:00"
-}
-```
-
-## Performance Considerations
-
-### Memory Usage
-- **Foundation Models**: ~8GB GPU memory for all models
-- **Patch Processing**: Memory scales with patch size and batch size
-- **Large Images**: Consider processing in smaller sections for very large images
-
-### Processing Speed
-- **GPU (CUDA/MPS)**: ~100-500 patches per minute
-- **CPU**: ~10-50 patches per minute
-- **Batch Processing**: More efficient for multiple images
-
-### Optimization Tips
-1. Use GPU acceleration when available
-2. Adjust patch size based on your needs (larger patches = fewer total patches)
-3. Process multiple images in batch to reuse loaded models
-4. Use SSD storage for faster I/O
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Out of Memory Error**
-   - Reduce patch size
-   - Use CPU instead of GPU
-   - Process smaller image sections
-
-2. **Model Loading Errors**
-   - Check HuggingFace token validity
-   - Ensure internet connection for model downloads
-   - Verify model file paths
-
-3. **White Patch Detection**
-   - Adjust `white_threshold` (default: 220) and `white_ratio_cutoff` (default: 0.4) parameters
-   - Check image quality and staining
-
-4. **Device Issues**
-   - Use `--device cpu` for compatibility
-   - Check CUDA/MPS availability
-   - Update GPU drivers if needed
-
-### Error Messages
-
-- **"Model file not found"**: Check model directory path and file names
-- **"Features file not found"**: Check features directory path and file names
-- **"Image file not found"**: Verify image path and file format
-- **"CUDA out of memory"**: Reduce patch size or use CPU
-
-## Examples
-
-### Single Image Processing
-```bash
-# Using YAML config
-python STPath_COAD_Predictor.py --config config.yaml --image_path image.tif
-
-# Override specific parameters
-python STPath_COAD_Predictor.py --config config.yaml --image_path image.tif --patch_size 320 --device cuda
-```
-
-### Batch Processing
-```bash
-# Process multiple images
-for image in images/*.tif; do
-    python STPath_COAD_Predictor.py --config config.yaml --image_path "$image"
-done
-```
+### Memory Requirements
+- **Feature Extraction**: 16GB GPU VRAM recommended
+- **Model Training**: 32GB RAM minimum
+- **Large WSI Processing**: 64GB RAM recommended
 
 ## Citation
 
-If you use this tool in your research, please cite the relevant foundation models and your own work.
+If you use this code in your research, please cite:
+
+```
+[Citation information to be added upon publication]
+```
+
+## Related Repositories
+
+- **STPath-Software**: Standalone prediction tool for clinical use (separate repository)
+- **BRCA Analysis**: Breast cancer application scripts (see `/Users/scui2/Desktop/BRCA_github/`)
 
 ## License
 
-This tool is provided for research and clinical use. Please ensure compliance with relevant regulations and ethical guidelines.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For questions, issues, or collaborations, please open an issue on GitHub or contact the authors.
+
+## Acknowledgments
+
+- Foundation models: Conch, UNI, ProvGigaPath, Virchow, Virchow2
+- CARD deconvolution method
+- TCGA consortium for data access
+- All data contributors and collaborators
+
+---
+
+**Last Updated**: December 2025

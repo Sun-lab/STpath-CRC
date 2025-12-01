@@ -6,7 +6,7 @@ This script prepares HEST-1K spatial transcriptomics data for CARD deconvolution
 analysis by formatting expression matrices and spatial coordinates.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Process and format HEST-1K spatial transcriptomics data for downstream 
 CARD deconvolution analysis. Prepares expression matrices and coordinate files 

@@ -6,7 +6,7 @@ This script performs comprehensive comparison analysis of different XGBoost mode
 and foundation model combinations for cell type proportion prediction.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Compare performance of different foundation models (ResNet50, Conch, ProvGigapath, 
 UNI2h, Virchow, Virchow2) and their combination for cell type proportion prediction.
@@ -31,10 +31,22 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 # Collect all the results
 all_results = []
 
-for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:
-    for model in ["ResNet50", "Conch", "ProvGigapath", "UNI2h", "Virchow", "Virchow2", "Combined"]:
+# Map display names to file names
+model_file_names = {
+    'ResNet50': 'ResNet50',
+    'Conch': 'Conch',
+    'Prov-GigaPath': 'ProvGigapath',
+    'UNI2-h': 'UNI2h', 
+    'Virchow': 'Virchow',
+    'Virchow2': 'Virchow2',
+    'Combined': 'Combined'
+}
 
-        df = pd.read_csv(f"xgboost_prediction/{cell_type}_{model}_individual_level_ratio100/individual_metrics_individual_level.csv")
+for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:
+    for model in ["ResNet50", "Conch", "Prov-GigaPath", "UNI2-h", "Virchow", "Virchow2", "Combined"]:
+
+        file_model_name = model_file_names[model]
+        df = pd.read_csv(f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_{file_model_name}_individual_level_ratio100/individual_metrics_individual_level.csv")
         
         for index, row in df.iterrows():
             ct_range = row["Max_celltype_proportion"] - row["Min_celltype_proportion"]
@@ -53,6 +65,10 @@ for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T
 
 # Create the final DataFrame
 final_df = pd.DataFrame(all_results)
+
+# Map cell type names for display
+final_df['cell_type'] = final_df['cell_type'].replace('Other Immune Cells', 'pan-APC')
+
 final_df.to_csv(f"xgboost_prediction/individual_metrics_individual_level_filtered.csv", index=False)
 
 
@@ -66,8 +82,8 @@ sns.set_palette("husl")
 color_palette = {
     'ResNet50': '#FEF0DE',
     'Conch': '#C43E96', 
-    'ProvGigapath': '#DEDBEE',
-    'UNI2h': '#06948E',
+    'Prov-GigaPath': '#DEDBEE',
+    'UNI2-h': '#06948E',
     'Virchow': '#F3CDCC',
     'Virchow2': '#F0CF7F',
     'Combined': '#FF6B6B'  
@@ -80,12 +96,12 @@ metric_titles = ['Mean Absolute Error (MAE)', 'Pearson Correlation']
 # Create a separate figure for each metric
 for i, (metric, title) in enumerate(zip(metrics, metric_titles)):
     # Create a separate figure
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    fig, ax = plt.subplots(1, 1, figsize=(18, 8))
     
     # Debug: Check data for current metric
     if metric == 'MAE':
         print(f"\nDEBUG - {metric} data check:")
-        for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:
+        for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "pan-APC"]:
             cell_data = final_df[final_df['cell_type'] == cell_type]
             print(f"{cell_type}: {len(cell_data)} samples")
             if len(cell_data) > 0:
@@ -101,7 +117,7 @@ for i, (metric, title) in enumerate(zip(metrics, metric_titles)):
         palette=color_palette,
         ax=ax,
         showfliers=False,  # Do not show outliers, because we will use scatter plot to show all points
-        linewidth=1.5,
+        linewidth=3,  # Thicker box borders
         legend=False  # Do not show legend
     )
     
@@ -118,12 +134,12 @@ for i, (metric, title) in enumerate(zip(metrics, metric_titles)):
         hue='model_name',
         palette=color_palette,
         ax=ax,
-        size=6,
-        alpha=0.8,
+        size=6,  # Same size as FigureS10
+        alpha=0.7,  # Match FigureS10 alpha
         dodge=True,  # Let the points with different hue to be displayed separately
         jitter=0.3,  # Add jitter
         edgecolor='black',
-        linewidth=0.5,
+        linewidth=0.5,  # Match FigureS10 linewidth
         legend=False  # Do not show the legend of the stripplot
     )
     
@@ -132,8 +148,8 @@ for i, (metric, title) in enumerate(zip(metrics, metric_titles)):
     ax.set_ylabel(title, fontsize=22, fontweight='bold')  # Set the vertical axis title to be bold
     
     # Set the tick label style - the horizontal and vertical axis ticks to be bold
-    ax.tick_params(axis='x', rotation=0, labelsize=20, labelcolor='black', 
-                   width=2, length=6, colors='black')  # rotation=0 makes x-axis labels horizontal
+    ax.tick_params(axis='x', rotation=25, labelsize=20, labelcolor='black', 
+                   width=2, length=6, colors='black')  # rotation=25 makes x-axis labels tilted
     ax.tick_params(axis='y', labelsize=20, labelcolor='black', 
                    width=2, length=6, colors='black')
     
@@ -176,11 +192,14 @@ for i, (metric, title) in enumerate(zip(metrics, metric_titles)):
     plt.tight_layout()
     
     # Save the figure
-    plt.savefig(f'Colorectal_Cancer_HE_patches/Visual/model_comparison_{metric}_boxplot.png', 
+    plt.savefig(f'/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/model_comparison_{metric}_boxplot.png', 
                 dpi=600, bbox_inches='tight', facecolor='white')
     
     # Show the figure
     plt.show()
+
+
+
 
 
 ### Normalization Function for Panel A
@@ -581,7 +600,7 @@ del final_marker_genes_dict["Normal Epithelia"]
 
 
 InputDf_for_CARD_SelectedGenes = pd.read_csv('scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
-InputDf_for_CARD_meta = pd.read_csv('/Users/scui2/ST/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
+InputDf_for_CARD_meta = pd.read_csv('/Users/scui2/Desktop/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
 InputDf_for_CARD_meta.loc[InputDf_for_CARD_meta["Cell Type"] == "CD4+ T", "Cell Type"] = "T"
 InputDf_for_CARD_meta.loc[InputDf_for_CARD_meta["Cell Type"] == "CD8+ T", "Cell Type"] = "T"
 
@@ -680,7 +699,7 @@ focus_relative_marker_genes_expression = (relative_marker_genes_expression_df_gr
 
 
 
-Spatial_location_df = pd.read_csv('/Users/scui2/ST/CARD_Need_Files/6723_KL_1_region0_spatial.csv', index_col=0)
+Spatial_location_df = pd.read_csv('/Users/scui2/Desktop/CARD_Need_Files/6723_KL_1_region0_spatial.csv', index_col=0)
 predicted_data = torch.load("Colorectal_Cancer_HE_patches/xgboost_prediction/Cancer Cells_Combined_individual_level_ratio100/xgboost_results_individual_level.pt")
 
 # 6723_KL_1_region0
@@ -1039,7 +1058,7 @@ focus_relative_marker_genes_expression = (relative_marker_genes_expression_df_gr
 
 
 
-Spatial_location_df = pd.read_csv('/Users/scui2/ST/CARD_Need_Files/7003_AS_4_region0_spatial.csv', index_col=0)
+Spatial_location_df = pd.read_csv('/Users/scui2/Desktop/CARD_Need_Files/7003_AS_4_region0_spatial.csv', index_col=0)
 predicted_data = torch.load("Colorectal_Cancer_HE_patches/xgboost_prediction/Stromal Cells_Combined_individual_level_ratio100/xgboost_results_individual_level.pt")
 
 # 7003_AS_4_region0

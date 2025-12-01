@@ -6,7 +6,7 @@ This script extracts and processes important features from trained XGBoost model
 to create supplementary tables showing feature importance across different models.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Extract feature importance scores from trained XGBoost models for all
 cell types and foundation models, create comprehensive feature importance tables

@@ -6,7 +6,7 @@ This script generates summary statistics and demographics for TCGA colorectal ca
 cohort used in STPath-COAD validation. Creates comprehensive patient characteristics table.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Generate comprehensive summary table of TCGA patient characteristics,
 clinical variables, and molecular features for Table 1 of the STPath-COAD manuscript.

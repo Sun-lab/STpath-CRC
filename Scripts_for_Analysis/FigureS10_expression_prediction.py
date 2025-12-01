@@ -6,7 +6,7 @@ This script predicts gene expression levels from histopathology features and
 generates analysis for supplementary Figure S10.
 
 Author: Saishi Cui
-Date: Sept 2025
+Date: December 2025
 
 Purpose: Predict gene expression levels using STPath-COAD histopathology features,
 validate predictions against actual expression data, and generate comprehensive
@@ -29,7 +29,7 @@ import xgboost as xgb
 
 # ===== PROCESSING CODY'S DATA =====
 print("\nProcessing Cody's data...")
-cody_data_dir = "data/CARD_Need_Files"
+cody_data_dir = "/Users/scui2/Desktop/CARD_Need_Files"
 cody_expression_files = glob.glob(os.path.join(cody_data_dir, "*_expression.csv"))
 print(f"Found {len(cody_expression_files)} Cody expression files")
 
@@ -76,7 +76,7 @@ print(f"Common genes across all Cody files: {len(cody_common_genes)}")
 
 # ===== PROCESSING FREDHUTCH (FH) DATA =====
 print("\nProcessing FredHutch data...")
-fh_data_dir = "FredHutch_Colorectal/CARD_Need_Files"
+fh_data_dir = "/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Need_Files"
 fh_expression_files = glob.glob(os.path.join(fh_data_dir, "*_expression.csv"))
 print(f"Found {len(fh_expression_files)} FH expression files")
 
@@ -153,188 +153,25 @@ for df in tqdm(fh_normalized_dfs, desc="Processing FH normalized data"):
 print("Concatenating all normalized data...")
 all_final_dfs = cody_final_dfs + fh_final_dfs
 Final_combined_expression_normalized = pd.concat(all_final_dfs, axis=0)
+Final_combined_expression_lognormalized = np.log2(Final_combined_expression_normalized * 10000 + 1)
 
-print(f"\nFinal combined normalized expression matrix:")
-print(f"Shape: {Final_combined_expression_normalized.shape}")
-print(f"Rows (spots): {Final_combined_expression_normalized.shape[0]}")
-print(f"Columns (genes): {Final_combined_expression_normalized.shape[1]}")
-print(f"Data range: {Final_combined_expression_normalized.values.min():.6f} to {Final_combined_expression_normalized.values.max():.6f}")
 
 # Save the normalized data
-output_dir = "Colorectal_Cancer_HE_patches/Gene_Expression_Prediction"
+output_dir = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction"
 os.makedirs(output_dir, exist_ok=True)
-Final_combined_expression_normalized.to_csv(os.path.join(output_dir, "Final_combined_expression_normalized.csv"))
+Final_combined_expression_lognormalized.to_csv(os.path.join(output_dir, "Final_combined_expression_lognormalized.csv"))
 print(f"Saved normalized expression data to: {output_dir}")
 
 
-### STEP 3: Process B_matrix files - UNION of all genes
-print("\n" + "="*80)
-print("PROCESSING B_MATRIX FILES - UNION OF ALL GENES")
-print("="*80)
 
-# Extract sample IDs from the combined data
-sample_ids = ["_".join(item[1:]) for item in Final_combined_expression_normalized.index.str.split("_")]
-unique_sample_ids = sorted(list(set(sample_ids)))
-print(f"Found {len(unique_sample_ids)} unique sample IDs")
-
-# Find B_matrix files from both locations
-b_matrix_folder1 = "/Users/scui2/ST/CARD_Results_Regions"
-b_matrix_folder2 = "FredHutch_Colorectal/CARD_Results_Regions"
-
-print(f"Searching for B_matrix files in:")
-print(f"  Location 1: {b_matrix_folder1}")
-print(f"  Location 2: {b_matrix_folder2}")
-
-# Find all B_matrix files
-b_matrix_files1 = glob.glob(os.path.join(b_matrix_folder1, "*_B_Matrix_modified.csv"))
-b_matrix_files2 = glob.glob(os.path.join(b_matrix_folder2, "*_B_Matrix_modified.csv"))
-
-print(f"Found {len(b_matrix_files1)} B_matrix files in location 1")
-print(f"Found {len(b_matrix_files2)} B_matrix files in location 2")
-
-all_b_matrix_files = b_matrix_files1 + b_matrix_files2
-print(f"Total B_matrix files: {len(all_b_matrix_files)}")
-
-# Match sample IDs with existing B_matrix files
-matched_b_matrix_files = []
-for sample_id in unique_sample_ids:
-    # Check both locations
-    file1 = os.path.join(b_matrix_folder1, f"{sample_id}_B_Matrix_modified.csv")
-    file2 = os.path.join(b_matrix_folder2, f"{sample_id}_B_Matrix_modified.csv")
-    
-    if os.path.exists(file1):
-        matched_b_matrix_files.append(file1)
-    elif os.path.exists(file2):
-        matched_b_matrix_files.append(file2)
-
-print(f"Matched {len(matched_b_matrix_files)} B_matrix files for our sample IDs")
-
-
-# Read all B_matrix files and create UNION of genes
-print("Reading B_matrix files and creating UNION of genes...")
-union_genes = set()
-first_b_matrix = None
-
-for i, file_path in enumerate(tqdm(matched_b_matrix_files, desc="Processing B_matrix files")):
-    try:
-        df = pd.read_csv(file_path, index_col=0)
-        union_genes.update(df.index)
-        
-        if first_b_matrix is None:
-            first_b_matrix = df.copy()
-            print(f"  Example B_matrix file: {os.path.basename(file_path)}")
-            print(f"  Shape: {df.shape}")
-            print(f"  Columns: {list(df.columns)}")
-        
-    except Exception as e:
-        print(f"  Error reading {file_path}: {e}")
-
-print(f"UNION of genes across all B_matrix files: {len(union_genes)}")
-
-# Create combined B_matrix with all unique genes
-print("Creating combined B_matrix with union genes...")
-union_genes_list = sorted(list(union_genes))
-
-# Initialize the combined B_matrix with union genes
-Combined_B_Matrix = pd.DataFrame(index=union_genes_list, columns=first_b_matrix.columns)
-
-# Fill the combined B_matrix by reading each file and updating missing genes
-genes_filled = set()
-
-for file_path in tqdm(matched_b_matrix_files, desc="Combining B_matrix data"):
-    try:
-        df = pd.read_csv(file_path, index_col=0)
-        
-        # For each gene in this file, add it to combined matrix if not already present
-        for gene in df.index:
-            if gene not in genes_filled:
-                Combined_B_Matrix.loc[gene] = df.loc[gene]
-                genes_filled.add(gene)
-                
-    except Exception as e:
-        print(f"  Error reading {file_path}: {e}")
-
-# Fill any remaining NaN values with 0
-Combined_B_Matrix = Combined_B_Matrix.fillna(0)
-
-cell_type_order = ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", 
-"CSC III", "CSC IV", "SSC I", 
-"ABS", "CT", "EE", "TUF",
-"T", "PLA", "MAS", "MYE", "B", "FIB", "END"]
-
-
-Combined_B_Matrix.columns = ['ASC I', 'ASC II', 'ASC III', 'CSC III', 'CSC I', 'CSC IV', "CSC II", 'SSC I', 'ABS', 'CT', 'EE', 'TUF', 'T', 'PLA', 'MAS', 'MYE', 'FIB', 'B', 'END']
-Combined_B_Matrix = Combined_B_Matrix[cell_type_order]
-
-
-
-# Save combined B_matrix
-Combined_B_Matrix.to_csv(os.path.join(output_dir, "Combined_B_Matrix_Union.csv"))
-print(f"Saved combined B_matrix to: {output_dir}")
-
-
-
-# Calculate relative expression of marker genes - Efficient version
-print("Calculating double normalized expression for all cell types...")
-
-# Define cell type groups for normalization
-cell_type_groups = {
-    "Cancer Cells": ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I"],
-    "T Cells": ["T"],
-    "Other Immune Cells": ["PLA", "MAS", "MYE", "B"],
-    "Stromal Cells": ["FIB", "END"]
-}
-
-
-Tumor_important_marker_genes = ["TMEM54", "MARCKSL1", "FXYD3", "S100A6", "S100P"]
-T_important_marker_genes = ["TC2N", "CD4", "CELF2", "PLCB1", "AAK1"]
-Stromal_important_marker_genes = ["SPARC", "FN1", "COL6A2", "FSTL1", "TNC"]
-Other_Immune_important_marker_genes = ["IGKC", "CD74", "VIM", "POU2AF1", "CTSL"]
-
-marker_genes_clean_dict = {}
-marker_genes_clean_dict["Cancer Cells"] = Tumor_important_marker_genes
-marker_genes_clean_dict["T Cells"] = T_important_marker_genes
-marker_genes_clean_dict["Stromal Cells"] = Stromal_important_marker_genes
-marker_genes_clean_dict["Other Immune Cells"] = Other_Immune_important_marker_genes
-
-# Process each cell type and collect normalized data
-normalized_dfs = []
-
-for cell_type, cell_subtypes in cell_type_groups.items():
-    print(f"Processing {cell_type}...")
-    marker_genes = marker_genes_clean_dict[cell_type]
-    
-    # Create a dictionary to store normalized genes for this cell type
-    normalized_genes = {}
-    
-    for gene in marker_genes:
-        # Get the mean B_matrix value for this gene across relevant cell subtypes
-        b_matrix_mean = Combined_B_Matrix.T.loc[cell_subtypes, gene].mean(axis=0)
-        
-        # Normalize: expression / B_matrix_mean
-        normalized_gene_expr = Final_combined_expression_normalized[gene].div(b_matrix_mean)
-        normalized_genes[gene] = normalized_gene_expr
-    
-    # Convert to DataFrame
-    cell_type_df = pd.DataFrame(normalized_genes, index=Final_combined_expression_normalized.index)
-    normalized_dfs.append(cell_type_df)
-    print(f"  Processed {len(marker_genes)} genes for {cell_type}")
-
-# Concatenate all normalized DataFrames at once (efficient)
-print("Concatenating all normalized gene expressions...")
-Final_combined_expression_double_normalized = pd.concat(normalized_dfs, axis=1)
-
-
-Final_combined_expression_double_normalized_log = np.log2(Final_combined_expression_double_normalized * 10000 + 1)
-Final_combined_expression_double_normalized_log.to_csv(os.path.join(output_dir, "Final_combined_expression_double_normalized_log.csv"))
-
+Final_combined_expression_lognormalized = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/Final_combined_expression_lognormalized.csv", index_col=0)
 
 ### Extract Cell Type Proportions for each barcode
 
 # Define the two directories to search for CARD results
 card_dirs = [
-    "FredHutch_Colorectal/CARD_Results_Regions",
-    "/Users/scui2/ST/CARD_Results_Regions"
+    "/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Results_Regions",
+    "/Users/scui2/Desktop/CARD_Results_Regions"
 ]
 
 # Cell type grouping mapping (same as in original script)
@@ -347,8 +184,9 @@ cell_type_groups = {
 }
 
 # Initialize cell proportions DataFrame with same index as expression data
+
 cell_proportions_df = pd.DataFrame(
-    index=Final_combined_expression_double_normalized_log.index,
+    index=Final_combined_expression_lognormalized.index,
     columns=['Cancer_Cells_Proportion', 'Normal_Epithelial_Proportion', 'Stromal_Proportion', 'T_Cells_Proportion', 'Other_Immune_Proportion']
 )
 cell_proportions_df = cell_proportions_df.fillna(0.0)
@@ -356,13 +194,13 @@ cell_proportions_df = cell_proportions_df.fillna(0.0)
 print(f"Initialized cell proportions DataFrame: {cell_proportions_df.shape}")
 
 # Extract unique sample IDs from barcode index
-sample_ids = ["_".join(item.split("_")[1:]) for item in Final_combined_expression_double_normalized_log.index.str.split("_")]
+sample_ids = ["_".join(item[1:]) for item in Final_combined_expression_lognormalized.index.str.split("_")]
 unique_samples = sorted(list(set(sample_ids)))
 print(f"Processing {len(unique_samples)} unique samples...")
 
 # Process each sample
 matched_barcodes = 0
-total_barcodes = len(Final_combined_expression_double_normalized_log.index)
+total_barcodes = len(Final_combined_expression_lognormalized.index)
 
 for sample_id in unique_samples:
     print(f"\nProcessing sample: {sample_id}")
@@ -418,7 +256,7 @@ for sample_id in unique_samples:
     
     # Match expression data barcodes with CSV barcodes for this sample
     sample_matched = 0
-    for expr_barcode in Final_combined_expression_double_normalized_log.index:
+    for expr_barcode in Final_combined_expression_lognormalized.index:
         # Check if this barcode belongs to current sample
         expr_sample = "_".join(expr_barcode.split("_")[1:])
         if expr_sample != sample_id:
@@ -441,12 +279,6 @@ for sample_id in unique_samples:
     
     print(f"  Matched {sample_matched} barcodes for sample {sample_id}")
 
-# Final summary
-print(f"\nFinal cell proportion matching results:")
-print(f"  Total matched barcodes: {matched_barcodes}/{total_barcodes}")
-print(f"  Total unmatched barcodes: {total_barcodes - matched_barcodes}/{total_barcodes}")
-print(f"  Cell proportions DataFrame shape: {cell_proportions_df.shape}")
-print(f"  Cell type order: {list(cell_proportions_df.columns)}")
 
 
 ### Filter to keep only matched barcodes (intersected)
@@ -460,10 +292,10 @@ print(f"Barcodes with cell proportions: {len(matched_barcodes_list)}")
 print(f"Barcodes without cell proportions: {len(cell_proportions_df) - len(matched_barcodes_list)}")
 
 # Filter expression data to keep only matched barcodes
-Final_combined_expression_double_normalized_log_filtered = Final_combined_expression_double_normalized_log.loc[matched_barcodes_list]
+Final_combined_expression_normalized_log_filtered = Final_combined_expression_lognormalized.loc[matched_barcodes_list]
 cell_proportions_df_filtered = cell_proportions_df.loc[matched_barcodes_list]
 
-print(f"\nFiltered expression data shape: {Final_combined_expression_double_normalized_log_filtered.shape}")
+print(f"\nFiltered expression data shape: {Final_combined_expression_normalized_log_filtered.shape}")
 print(f"Filtered cell proportions shape: {cell_proportions_df_filtered.shape}")
 
 # Verify no zero cell proportions remain
@@ -479,57 +311,258 @@ for col in cell_proportions_df_filtered.columns:
 
 # Save filtered data
 cell_proportions_df_filtered.to_csv(os.path.join(output_dir, "Cell_Type_Proportions_Filtered.csv"))
-Final_combined_expression_double_normalized_log_filtered.to_csv(os.path.join(output_dir, "Final_combined_expression_double_normalized_log_filtered.csv"))
 
 
 
 
+### Marker genes refinement
+with open('/Users/scui2/Desktop/scRNAseq_data/final_marker_genes_dict.json', 'r') as f:
+    final_marker_genes_dict = json.load(f)
+
+del final_marker_genes_dict["Cancer"]
+del final_marker_genes_dict["Normal Epithelia"]
 
 
-### XGBoost Training for Selected Important Genes
+
+InputDf_for_CARD_SelectedGenes = pd.read_csv('/Users/scui2/Desktop/scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
+InputDf_for_CARD_meta = pd.read_csv('/Users/scui2/Desktop/scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CD4+ T"] = "T"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CD8+ T"] = "T"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "ASC I"] = "Cancer_Cells"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "ASC II"] = "Cancer_Cells"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "ASC III"] = "Cancer_Cells"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CSC I"] = "Cancer_Cells"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CSC II"] = "Cancer_Cells"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CSC III"] = "Cancer_Cells"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CSC IV"] = "Cancer_Cells"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "SSC I"] = "Cancer_Cells"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "ABS"] = "Normal_Epithelial"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CT"] = "Normal_Epithelial"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "EE"] = "Normal_Epithelial"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "TUF"] = "Normal_Epithelial"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "FIB"] = "Stromal"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "END"] = "Stromal"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "PLA"] = "Other_Immune"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "MAS"] = "Other_Immune"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "MYE"] = "Other_Immune"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "B"] = "Other_Immune"
+
+
+InputDF_CounNorm_SelectedGenes = InputDf_for_CARD_SelectedGenes.T.div(InputDf_for_CARD_SelectedGenes.T.sum(axis=1), axis=0)
+
+  ## ranking marker genes based on the log2FC for each cell type
+final_ranked_gene_dict = {}
+for cell_type in InputDf_for_CARD_meta["Cell Type"].unique():
+    
+    temp_data = []
+    
+    for gene in InputDF_CounNorm_SelectedGenes.columns:
+        target_cell_GE_mean = InputDF_CounNorm_SelectedGenes.loc[InputDf_for_CARD_meta["Cell Type"] == cell_type, gene].mean()
+        non_target_cell_GE_mean = InputDF_CounNorm_SelectedGenes.loc[InputDf_for_CARD_meta["Cell Type"] != cell_type, gene].mean()
+        log2FC = np.log2(target_cell_GE_mean+1e-8) - np.log2(non_target_cell_GE_mean+1e-8)
+        
+        if log2FC >= 1:
+            temp_data.append({"Gene": gene, "log2FC": log2FC})
+    
+    unsorted_df = pd.DataFrame(temp_data, columns=["Gene", "log2FC"])
+    sorted_df = unsorted_df.sort_values(by="log2FC", ascending=False)
+    selected_genes = sorted_df["Gene"].tolist()
+    final_ranked_gene_dict[cell_type] = selected_genes
+    print(cell_type, len(final_ranked_gene_dict[cell_type]))
 
 
 
+
+marker_genes_clean_dict = {}
+for key, value in final_ranked_gene_dict.items():
+    marker_genes_clean_dict[key] = list(set(value).intersection(set(Final_combined_expression_lognormalized.columns)))
+
+
+# Find all genes and their occurrence counts
+all_genes = []
+for genes in marker_genes_clean_dict.values():
+    all_genes.extend(genes)
+
+from collections import Counter
+gene_counts = Counter(all_genes)
+duplicate_genes = [gene for gene, count in gene_counts.items() if count > 1]
+
+marker_genes_clean_dict_unique = {}
+for cell_type, genes in marker_genes_clean_dict.items():
+    unique_genes = [gene for gene in genes if gene not in duplicate_genes]
+    marker_genes_clean_dict_unique[cell_type] = unique_genes
+
+marker_genes_clean_dict_unique_top30 = {}
+for key, value in marker_genes_clean_dict_unique.items():
+    marker_genes_clean_dict_unique_top30[key] = value[:30]
+
+
+marker_genes_clean_dict_unique_top30["Cancer_Cells"]
+marker_genes_clean_dict_unique_top30["Normal_Epithelial"]
+marker_genes_clean_dict_unique_top30["T"]
+marker_genes_clean_dict_unique_top30["Other_Immune"]
+marker_genes_clean_dict_unique_top30["Stromal"]
+
+
+
+
+highly_variable_genes = Final_combined_expression_normalized_log_filtered.std(axis=0).sort_values(ascending=False).index.tolist()
+highly_variable_genes_clean = []
+all_marker_genes = set()
+for key, value in final_ranked_gene_dict.items():
+    all_marker_genes.update(value)
+for gene in highly_variable_genes:
+    if gene not in all_marker_genes:
+        highly_variable_genes_clean.append(gene)
+
+
+highly_variable_genes_clean_top30 = highly_variable_genes_clean[:30]
+
+Predictor_genes = marker_genes_clean_dict_unique_top30["Cancer_Cells"] + marker_genes_clean_dict_unique_top30["Normal_Epithelial"] + marker_genes_clean_dict_unique_top30["T"] + marker_genes_clean_dict_unique_top30["Other_Immune"] + marker_genes_clean_dict_unique_top30["Stromal"] + highly_variable_genes_clean_top30
+
+Final_combined_expression_normalized_log_filtered_Predictor_genes = Final_combined_expression_normalized_log_filtered[Predictor_genes]
+
+
+
+Final_combined_expression_normalized_log_filtered_Predictor_genes.to_csv(os.path.join(output_dir, "Final_combined_expression_normalized_log_filtered_Predictor_genes.csv"))
+
+
+
+
+### Merge and deduplicate training features from different cell types (Virchow2)
+
+
+features_dir = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features"
+feature_files = [
+    "Cancer Cells_training_precomputed_features_Virchow2.pt",
+    "Normal Epithelial Cells_training_precomputed_features_Virchow2.pt", 
+    "Other Immune Cells_training_precomputed_features_Virchow2.pt",
+    "Stromal Cells_training_precomputed_features_Virchow2.pt",
+    "T Cells_training_precomputed_features_Virchow2.pt"
+]
+
+print(f"Loading features from {len(feature_files)} files...")
+
+# Load all feature files and collect unique tiles
+all_tile_ids = set()
+all_data = {}
+for i, file_name in enumerate(feature_files):
+    file_path = os.path.join(features_dir, file_name)
+
+    data = torch.load(file_path, weights_only=False)
+    
+    # Extract information
+    features = data['embeddings']  # [n_tiles, n_features]
+    individual_ids = data['individual_ids']
+    tile_ids = data['tile_ids']
+    
+
+    # Store data for each unique tile
+    for j, tile_id in enumerate(tile_ids):
+        if tile_id not in all_data:
+            all_data[tile_id] = {
+                'features': features[j],
+                'individual_id': individual_ids[j],
+            }
+            all_tile_ids.add(tile_id)
+
+
+# Convert back to arrays
+unique_tile_ids = sorted(list(all_tile_ids))
+combined_features = []
+combined_individual_ids = []
+combined_celltype_proportions = None
+combined_marker_genes = None
+
+for tile_id in unique_tile_ids:
+    tile_data = all_data[tile_id]
+    combined_features.append(tile_data['features'])
+    combined_individual_ids.append(tile_data['individual_id'])
+    
+combined_features = torch.stack(combined_features)
+
+
+
+# Create mapping from tile_id to expression data index
+expr_tile_ids = [idx for idx in Final_combined_expression_normalized_log_filtered_Predictor_genes.index]
+expr_tile_ids_set = set(expr_tile_ids)
+
+# Find common tiles
+common_tile_ids = []
+common_indices_features = []
+common_indices_expr = []
+
+for i, tile_id in enumerate(unique_tile_ids):
+    if tile_id in expr_tile_ids_set:
+        common_tile_ids.append(tile_id)
+        common_indices_features.append(i)
+        expr_idx = expr_tile_ids.index(tile_id)
+        common_indices_expr.append(expr_idx)
+
+
+# Extract common data
+final_features = combined_features[common_indices_features]
+final_individual_ids = [combined_individual_ids[i] for i in common_indices_features]
+final_tile_ids = common_tile_ids
+
+# Extract corresponding expression data (180 predictor genes)
+final_expression_180genes = Final_combined_expression_normalized_log_filtered_Predictor_genes.iloc[common_indices_expr]
+
+# Extract corresponding cell proportions
+final_cell_proportions = cell_proportions_df_filtered.iloc[common_indices_expr]
+
+# Create combined dataset
+combined_dataset = {
+    'tile_ids': final_tile_ids,
+    'individual_ids': final_individual_ids,
+    'features': final_features,  # Virchow2 features
+    'expression_180genes': torch.tensor(final_expression_180genes.values, dtype=torch.float32),
+    'expression_180genes_names': list(final_expression_180genes.columns),
+    'cell_proportions': torch.tensor(final_cell_proportions.values, dtype=torch.float32),
+    'cell_proportion_names': list(final_cell_proportions.columns)
+}
+
+len(combined_dataset['tile_ids'])
+len(combined_dataset['individual_ids'])
+len(combined_dataset['features'])
+len(combined_dataset['expression_180genes'])
+len(combined_dataset['cell_proportions'])
+len(combined_dataset['expression_180genes_names'])
+len(combined_dataset['cell_proportion_names'])
+
+
+
+# Save combined dataset
+output_file = os.path.join(output_dir, "combined_features_Predictor_genes.pt")
+torch.save(combined_dataset, output_file)
+print(f"\nSaved combined dataset to: {output_file}")
+
+
+
+### XGBoost Training for 180 Predictor Genes
+
+print("\n" + "="*80)
+print("XGBOOST TRAINING FOR 180 PREDICTOR GENES")
+print("="*80)
+
+# Load combined dataset
+combined_dataset = torch.load(output_file)
+combined_dataset.keys()
 from scipy.stats import pearsonr
 from sklearn.linear_model import LinearRegression
+import xgboost as xgb
+from sklearn.preprocessing import StandardScaler
 
-# Combine all selected genes
-all_selected_genes = (Tumor_important_marker_genes + T_important_marker_genes + 
-                     Stromal_important_marker_genes + Other_Immune_important_marker_genes)
+# Extract data from combined dataset
+features = combined_dataset['features']  # Virchow2 features
+individual_ids = combined_dataset['individual_ids']
+tile_ids = combined_dataset['tile_ids'] 
+expression_180genes = combined_dataset['expression_300genes']  # 300 predictor genes
+expression_180genes_names = combined_dataset['expression_300genes_names']
+cell_proportions = combined_dataset['cell_proportions']  # 5 cell type proportions
+cell_proportion_names = combined_dataset['cell_proportion_names']
 
-# Create gene to cell type mapping
-gene_to_celltype = {}
-for gene in Tumor_important_marker_genes:
-    gene_to_celltype[gene] = "Tumor"
-for gene in T_important_marker_genes:
-    gene_to_celltype[gene] = "T"
-for gene in Stromal_important_marker_genes:
-    gene_to_celltype[gene] = "Stromal"  
-for gene in Other_Immune_important_marker_genes:
-    gene_to_celltype[gene] = "Other_Immune"
-
-
-# Load combined dataset (same as old version)
-combined_file = "Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/Training_features/Combined_all_celltypes_Virchow2_300genes.pt"
-print(f"\nLoading combined dataset: {combined_file}")
-
-data = torch.load(combined_file, weights_only=False)
-features = data['embeddings']  # [n_tiles, n_features]
-full_marker_expression = data['marker_expression']  # [n_tiles, 300_genes]
-individual_ids = data['individual_ids']
-tile_ids = data['tile_ids']
-full_marker_genes = data['marker_genes']  # 300 genes
-
-
-
-print(f"Dataset loaded:")
-print(f"  Features shape: {features.shape}")
-print(f"  Expression shape: {full_marker_expression.shape}")
-print(f"  Number of genes: {len(full_marker_genes)}")
-print(f"  Number of tiles: {len(tile_ids)}")
-print(f"  Number of individuals: {len(set(individual_ids))}")
-
-### Exclude specific individual
+# Exclude specific individuals
 excluded_individual = ["SU-15-27301-B1", "SU-16-02468-B1"] 
 valid_indices = [i for i, ind_id in enumerate(individual_ids) if ind_id not in excluded_individual]
 
@@ -537,6 +570,8 @@ valid_indices = [i for i, ind_id in enumerate(individual_ids) if ind_id not in e
 features = features[valid_indices]
 individual_ids = [individual_ids[i] for i in valid_indices]
 tile_ids = [tile_ids[i] for i in valid_indices]
+expression_180genes = expression_180genes[valid_indices]
+cell_proportions = cell_proportions[valid_indices]
 
 print(f"After excluding individuals:")
 print(f"  Features shape: {features.shape}")
@@ -545,71 +580,9 @@ print(f"  Number of individuals: {len(set(individual_ids))}")
 
 # Get unique individuals for cross-validation
 unique_individuals = sorted(list(set(individual_ids)))
+print(f"Unique individuals: {len(unique_individuals)}")
 
-# Find intersected tiles between all datasets
-print(f"\nFinding intersected tiles...")
-print(f"  Final_combined tiles: {len(Final_combined_expression_double_normalized_log_filtered)}")
-print(f"  Cell_proportions tiles: {len(cell_proportions_df_filtered)}")
-print(f"  Virchow2 tiles: {len(tile_ids)}")
-
-# Get tile sets
-final_combined_tiles = set(Final_combined_expression_double_normalized_log_filtered.index)
-cell_proportions_tiles = set(cell_proportions_df_filtered.index)
-virchow2_tiles = set(tile_ids)
-
-# Find intersection of all three datasets
-intersected_tiles = final_combined_tiles & cell_proportions_tiles & virchow2_tiles
-intersected_tiles = sorted(list(intersected_tiles))
-
-print(f"  Intersected tiles: {len(intersected_tiles)}")
-
-
-# Create mapping from tile_id to index in Virchow2 data
-virchow_tile_to_idx = {}
-for i, tile_id in enumerate(tile_ids):
-    virchow_tile_to_idx[tile_id] = i
-
-# Extract data for intersected tiles only
-matched_features = []
-matched_individual_ids = []
-matched_tile_ids = []
-
-for tile in intersected_tiles:
-    if tile in virchow_tile_to_idx:
-        virchow_idx = virchow_tile_to_idx[tile]
-        matched_features.append(features[virchow_idx])
-        matched_individual_ids.append(individual_ids[virchow_idx])
-        matched_tile_ids.append(tile)
-
-# Convert to arrays
-features = torch.stack(matched_features) if matched_features else torch.empty(0)
-individual_ids = matched_individual_ids
-tile_ids = matched_tile_ids
-
-
-# Get expression data for 20 genes (intersected tiles only)
-
-marker_expression_df = Final_combined_expression_double_normalized_log_filtered.loc[
-    intersected_tiles, all_selected_genes
-]
-
-marker_expression = marker_expression_df.values
-
-# Get cell type proportions for intersected tiles
-intersected_cell_proportions = cell_proportions_df_filtered.loc[intersected_tiles]
-
-marker_genes = marker_expression_df.columns.tolist()  # Use deduplicated column names
-unique_individuals = sorted(list(set(individual_ids)))
-
-print(f"\nFinal intersected data:")
-print(f"  Features shape: {features.shape}")
-print(f"  Marker expression shape: {marker_expression.shape}")
-print(f"  Cell proportions shape: {intersected_cell_proportions.shape}")
-print(f"  Number of genes: {len(marker_genes)}")
-print(f"  Number of tiles: {len(tile_ids)}")
-print(f"  Number of individuals: {len(unique_individuals)}")
-
-# XGBoost parameters 
+# XGBoost parameters
 xgb_params = {
     'objective': 'reg:squarederror',
     'eval_metric': 'rmse',
@@ -627,28 +600,39 @@ xgb_params = {
 }
 num_boost_round = 800
 
-# Cell type proportion mapping for partial correlation
-celltype_to_proportion = {
-    "Tumor": "Cancer_Cells_Proportion",
-    "T": "T_Cells_Proportion",
-    "Stromal": "Stromal_Proportion",
-    "Other_Immune": "Other_Immune_Proportion"
-}
+# CLR transformation function for proportions
+def clr_transform(proportions):
+    """
+    Apply centered log-ratio (CLR) transformation to proportions
+    CLR(x) = log(x_i / geometric_mean(x))
+    """
+    # Add small epsilon to avoid log(0)
+    epsilon = 1e-6
+    proportions_adj = proportions + epsilon
+    
+    # Calculate geometric mean
+    geometric_mean = np.exp(np.mean(np.log(proportions_adj), axis=1, keepdims=True))
+    
+    # Apply CLR transformation
+    clr_props = np.log(proportions_adj / geometric_mean)
+    
+    return clr_props
 
-# Function to calculate partial correlation with single control variable
-def partial_correlation(x, y, control):
+# Function to calculate partial correlation controlling for CLR-transformed cell proportions
+def partial_correlation_clr(x, y, cell_props):
     """
-    Calculate partial correlation between x and y, controlling for single control variable
+    Calculate partial correlation between x and y, controlling for CLR-transformed cell proportions
     """
-    control = control.reshape(-1, 1)
+    # Apply CLR transformation to cell proportions
+    clr_props = clr_transform(cell_props.numpy() if torch.is_tensor(cell_props) else cell_props)
     
-    # Regress x on control, get residuals
-    reg_x = LinearRegression().fit(control, x)
-    residual_x = x - reg_x.predict(control)
+    # Regress x on CLR-transformed proportions, get residuals
+    reg_x = LinearRegression().fit(clr_props, x)
+    residual_x = x - reg_x.predict(clr_props)
     
-    # Regress y on control, get residuals  
-    reg_y = LinearRegression().fit(control, y)
-    residual_y = y - reg_y.predict(control)
+    # Regress y on CLR-transformed proportions, get residuals  
+    reg_y = LinearRegression().fit(clr_props, y)
+    residual_y = y - reg_y.predict(clr_props)
     
     # Correlation between residuals = partial correlation
     if len(residual_x) > 1:
@@ -657,53 +641,64 @@ def partial_correlation(x, y, control):
     else:
         return 0.0
 
-# Initialize results DataFrames
-results_df_regular = pd.DataFrame(index=unique_individuals, columns=all_selected_genes)
-results_df_partial = pd.DataFrame(index=unique_individuals, columns=all_selected_genes)
+# Initialize results DataFrames and check for existing results
+regular_output_path = os.path.join(output_dir, "180genes_regular_correlations.csv")
+partial_output_path = os.path.join(output_dir, "180genes_partial_correlations_clr.csv")
 
-# Create output directories
-xgb_output_dir = os.path.join(output_dir, "xgboost_results")
-detailed_results_dir = os.path.join(output_dir, "detailed_gene_results")
-os.makedirs(xgb_output_dir, exist_ok=True)
-os.makedirs(detailed_results_dir, exist_ok=True)
-
-
-### Main XGBoost training loop for each gene
-for gene_idx, gene_name in enumerate(all_selected_genes):
-    gene_celltype = gene_to_celltype[gene_name]
-    proportion_col = celltype_to_proportion[gene_celltype]
+# Try to load existing results to resume from interruption
+if os.path.exists(regular_output_path) and os.path.exists(partial_output_path):
+    print("Found existing result files, loading...")
+    results_df_regular = pd.read_csv(regular_output_path, index_col=0)
+    results_df_partial = pd.read_csv(partial_output_path, index_col=0)
     
-    print(f"\n{'='*60}")
-    print(f"Processing gene {gene_idx + 1}/{len(all_selected_genes)}: {gene_name}")
-    print(f"Cell type: {gene_celltype}, Proportion column: {proportion_col}")
-    print(f"{'='*60}")
+    # Check which genes are already completed (non-null values)
+    completed_genes = []
+    for gene in expression_180genes_names:
+        if gene in results_df_regular.columns:
+            if not results_df_regular[gene].isna().all():  # If not all values are NaN
+                completed_genes.append(gene)
+    
+    print(f"Found {len(completed_genes)} already completed genes")
+    print(f"Resuming from gene {len(completed_genes) + 1}")
+else:
+    print("No existing result files found, starting fresh...")
+    results_df_regular = pd.DataFrame(index=unique_individuals, columns=expression_180genes_names)
+    results_df_partial = pd.DataFrame(index=unique_individuals, columns=expression_180genes_names)
+    completed_genes = []
+
+print(f"\nStarting leave-one-individual-out cross-validation for {len(expression_180genes_names)} genes...")
+print(f"Will process {len(expression_180genes_names) - len(completed_genes)} remaining genes...")
+
+# Main XGBoost training loop for each gene
+for gene_idx, gene_name in enumerate(expression_180genes_names):
+    # Skip if gene is already completed
+    if gene_name in completed_genes:
+        print(f"\nSkipping gene {gene_idx + 1}/{len(expression_180genes_names)}: {gene_name} (already completed)")
+        continue
+        
+    print(f"\nProcessing gene {gene_idx + 1}/{len(expression_180genes_names)}: {gene_name}")
     
     gene_predictions = {}
     gene_actuals = {}
     
-    ### Leave-one-individual-out cross-validation
+    # Leave-one-individual-out cross-validation
     for test_individual in unique_individuals:
-        print(f"  Testing on individual: {test_individual}")
-        
         # Split data
         train_indices = [i for i, ind_id in enumerate(individual_ids) if ind_id != test_individual]
         test_indices = [i for i, ind_id in enumerate(individual_ids) if ind_id == test_individual]
         
         if len(test_indices) == 0:
-            print(f"    Warning: No test data for {test_individual}")
             continue
             
         # Get train/test data
         X_train = features[train_indices]
-        y_train = marker_expression[train_indices, gene_idx]
+        y_train = expression_180genes[train_indices, gene_idx]
         X_test = features[test_indices]
-        y_test = marker_expression[test_indices, gene_idx]
-        
-        print(f"    Train samples: {len(X_train)}, Test samples: {len(X_test)}")
+        y_test = expression_180genes[test_indices, gene_idx]
         
         # Create DMatrix for XGBoost
-        dtrain = xgb.DMatrix(X_train, label=y_train)
-        dtest = xgb.DMatrix(X_test, label=y_test)
+        dtrain = xgb.DMatrix(X_train.numpy(), label=y_train.numpy())
+        dtest = xgb.DMatrix(X_test.numpy(), label=y_test.numpy())
         
         # Train model
         model = xgb.train(
@@ -718,15 +713,9 @@ for gene_idx, gene_name in enumerate(all_selected_genes):
         
         # Store results
         gene_predictions[test_individual] = y_pred
-        gene_actuals[test_individual] = y_test
-        
-        print(f"    Predicted values: min={y_pred.min():.4f}, max={y_pred.max():.4f}, mean={y_pred.mean():.4f}")
-        print(f"    Actual values: min={y_test.min():.4f}, max={y_test.max():.4f}, mean={y_test.mean():.4f}")
+        gene_actuals[test_individual] = y_test.numpy()
     
-    ### Calculate correlations for each individual
-    individual_correlations_regular = {}
-    individual_correlations_partial = {}
-    
+    # Calculate correlations for each individual
     for individual in unique_individuals:
         if individual in gene_predictions and individual in gene_actuals:
             pred_vals = gene_predictions[individual]
@@ -738,685 +727,225 @@ for gene_idx, gene_name in enumerate(all_selected_genes):
             if len(pred_vals) > 1 and len(individual_indices) > 1:  # Need at least 2 points for correlation
                 # Regular Pearson correlation
                 regular_corr, _ = pearsonr(actual_vals, pred_vals)
-                individual_correlations_regular[individual] = regular_corr if not np.isnan(regular_corr) else 0.0
+                results_df_regular.loc[individual, gene_name] = regular_corr if not np.isnan(regular_corr) else 0.0
                 
-                # Partial correlation (controlling for corresponding cell type proportion only)
-                individual_cell_props = intersected_cell_proportions.loc[
-                    intersected_cell_proportions.index[individual_indices], proportion_col
-                ].values
+                # Partial correlation controlling for CLR-transformed cell proportions
+                individual_cell_props = cell_proportions[individual_indices]
                 
                 if len(individual_cell_props) == len(pred_vals):
-                    partial_corr = partial_correlation(actual_vals, pred_vals, individual_cell_props)
-                    individual_correlations_partial[individual] = partial_corr
+                    partial_corr = partial_correlation_clr(actual_vals, pred_vals, individual_cell_props)
+                    results_df_partial.loc[individual, gene_name] = partial_corr
                 else:
-                    individual_correlations_partial[individual] = 0.0
+                    results_df_partial.loc[individual, gene_name] = 0.0
             else:
-                individual_correlations_regular[individual] = 0.0
-                individual_correlations_partial[individual] = 0.0
+                results_df_regular.loc[individual, gene_name] = 0.0
+                results_df_partial.loc[individual, gene_name] = 0.0
         else:
-            individual_correlations_regular[individual] = np.nan
-            individual_correlations_partial[individual] = np.nan
+            results_df_regular.loc[individual, gene_name] = np.nan
+            results_df_partial.loc[individual, gene_name] = np.nan
     
-    ### Update results DataFrames
-    for individual in unique_individuals:
-        if individual in individual_correlations_regular:
-            results_df_regular.loc[individual, gene_name] = individual_correlations_regular[individual]
-        if individual in individual_correlations_partial:
-            results_df_partial.loc[individual, gene_name] = individual_correlations_partial[individual]
+    # Save results after each gene (for crash recovery)
+    results_df_regular.to_csv(regular_output_path)
+    results_df_partial.to_csv(partial_output_path)
     
-    ### Calculate and print summary statistics
-    valid_correlations_regular = [corr for corr in individual_correlations_regular.values() if not np.isnan(corr)]
-    valid_correlations_partial = [corr for corr in individual_correlations_partial.values() if not np.isnan(corr)]
-    
-    print(f"\n  Gene {gene_name} Summary:")
-    if valid_correlations_regular:
-        mean_regular = np.mean(valid_correlations_regular)
-        median_regular = np.median(valid_correlations_regular)
-        print(f"    Regular Pearson - Mean: {mean_regular:.4f}, Median: {median_regular:.4f}")
-    
-    if valid_correlations_partial:
-        mean_partial = np.mean(valid_correlations_partial)
-        median_partial = np.median(valid_correlations_partial)
-        print(f"    Partial correlation - Mean: {mean_partial:.4f}, Median: {median_partial:.4f}")
-    
-    print(f"    Valid individuals: Regular={len(valid_correlations_regular)}, Partial={len(valid_correlations_partial)}/{len(unique_individuals)}")
-    
-    # Calculate mediation ratio if both are available
-    if valid_correlations_regular and valid_correlations_partial:
-        mean_mediation_ratio = (np.mean(valid_correlations_regular) - np.mean(valid_correlations_partial)) / np.mean(valid_correlations_regular) if np.mean(valid_correlations_regular) != 0 else 0
-        print(f"    Mediation ratio (cell type effect): {mean_mediation_ratio:.4f}")
-    
-    ### Save detailed gene results (copied from old version)
-    # Collect all predictions and cell proportions for this gene
-    all_tile_ids = []
-    all_actual = []
-    all_predicted = []
-    all_cell_props = []
-    
-    for individual in unique_individuals:
-        individual_indices = [i for i, ind_id in enumerate(individual_ids) if ind_id == individual]
-        if individual_indices:
-            # Get actual values
-            actual_vals = marker_expression[individual_indices, gene_idx]
-            
-            # Get predictions from the trained model
-            individual_features = features[individual_indices]
-            pred_vals = model.predict(xgb.DMatrix(individual_features.numpy()))
-            
-            # Get cell proportions
-            individual_cell_props_all = intersected_cell_proportions.iloc[individual_indices]
-            
-            # Store data
-            for i, idx in enumerate(individual_indices):
-                all_tile_ids.append(tile_ids[idx])
-                all_actual.append(actual_vals[i])
-                all_predicted.append(pred_vals[i])
-                # Get all 5 cell type proportions for this tile
-                tile_props = individual_cell_props_all.iloc[i]
-                all_cell_props.append([
-                    tile_props['Cancer_Cells_Proportion'],
-                    tile_props['Normal_Epithelial_Proportion'], 
-                    tile_props['T_Cells_Proportion'],
-                    tile_props['Stromal_Proportion'],
-                    tile_props['Other_Immune_Proportion']
-                ])
-    
-    # Create detailed DataFrame for this gene
-    if all_tile_ids:
-        detailed_df = pd.DataFrame({
-            'Tile_ID': all_tile_ids,
-            f'{gene_name}_True': all_actual,
-            f'{gene_name}_Predicted': all_predicted
-        })
-        
-        # Add cell type proportions
-        cell_type_names = ['Cancer_Cells', 'Normal_Epithelial', 'T_Cells', 'Stromal', 'Other_Immune']
-        for i, cell_type in enumerate(cell_type_names):
-            detailed_df[f'{cell_type}_Proportion'] = [props[i] for props in all_cell_props]
-        
-        # Save detailed CSV directly to detailed_gene_results folder (no subfolders)
-        detailed_csv_path = os.path.join(detailed_results_dir, f"{gene_name}_detailed_predictions.csv")
-        detailed_df.to_csv(detailed_csv_path, index=False)
-        print(f"  Saved detailed predictions to: {detailed_csv_path}")
-    else:
-        print(f"  Warning: No data available for detailed CSV for gene {gene_name}")
+    # Print progress after each gene
+    print(f"  Completed gene {gene_idx + 1}/{len(expression_180genes_names)}: {gene_name} - Results saved")
 
-# Save results to CSV
-regular_output_path = os.path.join(xgb_output_dir, "important_genes_regular_correlations.csv")
-partial_output_path = os.path.join(xgb_output_dir, "important_genes_partial_correlations.csv")
 
-results_df_regular.to_csv(regular_output_path)
-results_df_partial.to_csv(partial_output_path)
 
-print(f"\n" + "="*80)
-print("XGBOOST TRAINING COMPLETED")
+
+### ResNet50 Feature Processing and Simplified CV for 180 Predictor Genes
+
+print("\n" + "="*80)
+print("RESNET50 FEATURE PROCESSING AND SIMPLIFIED CV FOR 180 PREDICTOR GENES")
 print("="*80)
-print(f"Regular correlations saved to: {regular_output_path}")
-print(f"Partial correlations saved to: {partial_output_path}")
-print(f"Results shape: {results_df_regular.shape}")
 
-
-
-
-### Create correlation boxplot visualization
-import matplotlib.patches as mpatches
-from matplotlib.lines import Line2D
-import numpy as np
-from scipy.stats import wilcoxon
-
-print(f"\nCreating correlation boxplot visualization...")
-
-# Read the correlation results
-regular_corr_df = pd.read_csv(regular_output_path, index_col=0)
-partial_corr_df = pd.read_csv(partial_output_path, index_col=0)
-
-# Define gene groups and colors
-Tumor_genes = Tumor_important_marker_genes
-T_genes = T_important_marker_genes  
-Stromal_genes = Stromal_important_marker_genes
-Other_Immune_genes = Other_Immune_important_marker_genes
-
-gene_to_color = {}
-for gene in Tumor_genes:
-    gene_to_color[gene] = '#E41A1C'  # Red for Tumor
-for gene in T_genes:
-    gene_to_color[gene] = '#4DAF4A'  # Green for T
-for gene in Stromal_genes:
-    gene_to_color[gene] = '#FFFF33'  # Yellow for Stromal  
-for gene in Other_Immune_genes:
-    gene_to_color[gene] = '#FF7F00'  # Orange for Other Immune
-
-# Get the genes that are actually in our results (after deduplication)
-available_genes = [gene for gene in marker_genes if gene in regular_corr_df.columns]
-print(f"Available genes for plotting: {len(available_genes)}")
-
-# Create the figure
-fig, ax = plt.subplots(figsize=(20, 8))
-
-# Set up positions for genes and boxplots
-gene_positions = []
-x_labels = []
-x_ticks = []
-
-for i, gene in enumerate(available_genes):
-    # Each gene gets two positions: regular (left) and partial (right)
-    base_pos = i * 3  # Space between gene groups
-    reg_pos = base_pos - 0.3  # Regular correlation position (left)
-    part_pos = base_pos + 0.3  # Partial correlation position (right)
+# CLR transformation function for proportions (needed for partial correlation)
+def clr_transform_resnet50(proportions):
+    """
+    Apply centered log-ratio (CLR) transformation to proportions
+    CLR(x) = log(x_i / geometric_mean(x))
+    """
+    # Add small epsilon to avoid log(0)
+    epsilon = 1e-6
+    proportions_adj = proportions + epsilon
     
-    gene_positions.append((reg_pos, part_pos))
-    x_labels.append(gene)
-    x_ticks.append(base_pos)  # Center position for gene label
+    # Calculate geometric mean
+    geometric_mean = np.exp(np.mean(np.log(proportions_adj), axis=1, keepdims=True))
     
-    # Get correlation data for this gene
-    reg_data = regular_corr_df[gene].dropna()
-    part_data = partial_corr_df[gene].dropna()
+    # Apply CLR transformation
+    clr_props = np.log(proportions_adj / geometric_mean)
     
-    # Get color for this gene
-    color = gene_to_color.get(gene, '#000000')  # Default to black if not found
+    return clr_props
+
+# Function to calculate partial correlation controlling for CLR-transformed cell proportions
+def partial_correlation_clr_resnet50(x, y, cell_props):
+    """
+    Calculate partial correlation between x and y, controlling for CLR-transformed cell proportions
+    """
+    # Apply CLR transformation to cell proportions
+    clr_props = clr_transform_resnet50(cell_props.numpy() if torch.is_tensor(cell_props) else cell_props)
     
-    # Create boxplots
-    if len(reg_data) > 0:
-        bp_reg = ax.boxplot([reg_data], positions=[reg_pos], widths=0.4, 
-                           patch_artist=True, showfliers=False)
-        bp_reg['boxes'][0].set_facecolor(color)
-        bp_reg['boxes'][0].set_alpha(0.7)
-        bp_reg['boxes'][0].set_edgecolor('black')
-        bp_reg['boxes'][0].set_linewidth(2)
-        # Make other elements bold
-        for element in ['whiskers', 'caps', 'medians']:
-            for item in bp_reg[element]:
-                item.set_color('black')
-                item.set_linewidth(2)
-        
-        # Add individual points (circles for regular) with jitter
-        y_reg = reg_data.values
-        x_reg = np.random.normal(reg_pos, 0.05, len(y_reg))  # Add jitter
-        ax.scatter(x_reg, y_reg, c=color, marker='o', s=40, alpha=0.8, edgecolors='black', linewidth=1.5)
+    # Regress x on CLR-transformed proportions, get residuals
+    reg_x = LinearRegression().fit(clr_props, x)
+    residual_x = x - reg_x.predict(clr_props)
     
-    if len(part_data) > 0:
-        bp_part = ax.boxplot([part_data], positions=[part_pos], widths=0.4,
-                            patch_artist=True, showfliers=False)
-        bp_part['boxes'][0].set_facecolor(color)
-        bp_part['boxes'][0].set_alpha(0.7)
-        bp_part['boxes'][0].set_edgecolor('black')
-        bp_part['boxes'][0].set_linewidth(2)
-        # Make other elements bold
-        for element in ['whiskers', 'caps', 'medians']:
-            for item in bp_part[element]:
-                item.set_color('black')
-                item.set_linewidth(2)
-        
-        # Add individual points (triangles for partial) with jitter
-        y_part = part_data.values
-        x_part = np.random.normal(part_pos, 0.05, len(y_part))  # Add jitter
-        ax.scatter(x_part, y_part, c=color, marker='^', s=40, alpha=0.8, edgecolors='black', linewidth=1.5)
+    # Regress y on CLR-transformed proportions, get residuals  
+    reg_y = LinearRegression().fit(clr_props, y)
+    residual_y = y - reg_y.predict(clr_props)
     
-    # Perform Wilcoxon signed-rank test between regular and partial correlations
-    if len(reg_data) > 0 and len(part_data) > 0:
-        # Get matched pairs (same individuals)
-        reg_matched = []
-        part_matched = []
-        
-        for individual in regular_corr_df.index:
-            if individual in reg_data.index and individual in part_data.index:
-                reg_val = reg_data[individual]
-                part_val = part_data[individual]
-                if not (np.isnan(reg_val) or np.isnan(part_val)):
-                    reg_matched.append(reg_val)
-                    part_matched.append(part_val)
-        
-        if len(reg_matched) >= 5:  # Need at least 5 pairs for meaningful test
-            try:
-                statistic, p_value = wilcoxon(reg_matched, part_matched, alternative='two-sided')
-                
-                # Determine significance stars
-                if p_value < 0.001:
-                    stars = '***'
-                elif p_value < 0.01:
-                    stars = '**'
-                elif p_value < 0.05:
-                    stars = '*'
-                else:
-                    stars = 'ns'
-                
-                # Add p-value and stars at fixed y=0.9 position (no connecting line)
-                y_pos = 0.9
-                
-                # Add p-value text (stars and p-value only)
-                ax.text(base_pos, y_pos, f'{stars}\np={p_value:.3f}', 
-                       ha='center', va='center', fontsize=8, fontweight='bold', color='black')
-                
-            except Exception as e:
-                print(f"  Warning: Could not perform Wilcoxon test for {gene}: {e}")
-        else:
-            print(f"  Warning: Not enough matched pairs for {gene} ({len(reg_matched)} pairs)")
+    # Correlation between residuals = partial correlation
+    if len(residual_x) > 1:
+        partial_corr, p_value = pearsonr(residual_x, residual_y)
+        return partial_corr if not np.isnan(partial_corr) else 0.0
     else:
-        print(f"  Warning: Missing data for Wilcoxon test for {gene}")
+        return 0.0
 
-# Customize the plot
-ax.set_ylabel('Pearson Correlation', fontsize=14, fontweight='bold')
-
-# Set x-axis ticks (labels will be added later)
-ax.set_xticks(x_ticks)
-
-# Add vertical grid lines between gene groups
-for i in range(1, len(available_genes)):
-    ax.axvline(x=i*3 - 1.5, color='lightgray', linestyle='--', alpha=0.5)
-
-# Create legends
-# Legend 1: Correlation type (shape)
-correlation_legend_elements = [
-    Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', markersize=10, 
-           label='Regular Correlation', markeredgecolor='black'),
-    Line2D([0], [0], marker='^', color='w', markerfacecolor='gray', markersize=10,
-           label='Partial Correlation', markeredgecolor='black')
+# Load ResNet50 features
+features_dir = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features"
+feature_files_resnet50 = [
+    "Cancer Cells_training_precomputed_features_ResNet50.pt",
+    "Normal Epithelial Cells_training_precomputed_features_ResNet50.pt", 
+    "Other Immune Cells_training_precomputed_features_ResNet50.pt",
+    "Stromal Cells_training_precomputed_features_ResNet50.pt",
+    "T Cells_training_precomputed_features_ResNet50.pt"
 ]
 
-# Legend 2: Gene type (color)
-gene_type_legend_elements = [
-    Line2D([0], [0], marker='o', color='w', markerfacecolor='#E41A1C', markersize=10,
-           label='Tumor Markers', markeredgecolor='black'),
-    Line2D([0], [0], marker='o', color='w', markerfacecolor='#4DAF4A', markersize=10,
-           label='T Cell Markers', markeredgecolor='black'),
-    Line2D([0], [0], marker='o', color='w', markerfacecolor='#FFFF33', markersize=10,
-           label='Stromal Markers', markeredgecolor='black'),
-    Line2D([0], [0], marker='o', color='w', markerfacecolor='#FF7F00', markersize=10,
-           label='Other Immune Markers', markeredgecolor='black')
-]
+print(f"Loading ResNet50 features from {len(feature_files_resnet50)} files...")
 
-# Remove x-axis tick labels and set custom ones
-ax.set_xticklabels([])
+# Load all ResNet50 feature files and collect unique tiles
+all_tile_ids_resnet50 = set()
+all_data_resnet50 = {}
+for i, file_name in enumerate(feature_files_resnet50):
+    file_path = os.path.join(features_dir, file_name)
 
-# Add legends to the right side of the plot (no titles)
-leg1 = ax.legend(handles=correlation_legend_elements, 
-                loc='center left', bbox_to_anchor=(1.02, 0.75), fontsize=12)
-leg2 = ax.legend(handles=gene_type_legend_elements,
-                loc='center left', bbox_to_anchor=(1.02, 0.25), fontsize=12)
+    data = torch.load(file_path, weights_only=False)
+    
+    # Extract information
+    features = data['embeddings']  # [n_tiles, n_features]
+    individual_ids = data['individual_ids']
+    tile_ids = data['tile_ids']
+    
 
-# Make legend text bold
-for text in leg1.get_texts():
-    text.set_fontweight('bold')
-
-for text in leg2.get_texts():
-    text.set_fontweight('bold')
-
-# Add the first legend back
-ax.add_artist(leg1)
-
-# Styling - show all four borders, make them bold and black
-ax.grid(True, alpha=0.3)
-for spine in ax.spines.values():
-    spine.set_visible(True)
-    spine.set_color('black')
-    spine.set_linewidth(2)
-
-# Make y-axis tick labels bold
-ax.tick_params(axis='y', labelsize=12, labelcolor='black', width=2, length=6)
-for label in ax.get_yticklabels():
-    label.set_fontweight('bold')
-
-# Make x-axis ticks bold
-ax.tick_params(axis='x', width=2, length=6)
-
-# Set Y-axis range
-ax.set_ylim(bottom=ax.get_ylim()[0], top=1.0)
-
-# Add x-axis labels with gene-specific colors (Stromal genes use black for readability)
-gene_colors_for_labels = []
-for gene in available_genes:
-    if gene in Stromal_genes:
-        gene_colors_for_labels.append('#000000')  # Black for Stromal genes
-    else:
-        gene_colors_for_labels.append(gene_to_color.get(gene, '#000000'))
-
-y_min = ax.get_ylim()[0]
-y_range = ax.get_ylim()[1] - ax.get_ylim()[0]
-for i, (tick, label, color) in enumerate(zip(x_ticks, x_labels, gene_colors_for_labels)):
-    ax.text(tick, y_min - 0.08 * y_range, 
-            label, ha='center', va='top', rotation=45, fontsize=12, fontweight='bold', color=color)
-
-plt.tight_layout()
-
-# Save the plot
-boxplot_output_path = os.path.join(output_dir, "important_genes_correlation_boxplot.png")
-plt.savefig(boxplot_output_path, dpi=600, bbox_inches='tight')
-plt.close()
-
-print(f"Correlation boxplot saved to: {boxplot_output_path}")
-print("Boxplot visualization completed!")
+    # Store data for each unique tile
+    for j, tile_id in enumerate(tile_ids):
+        if tile_id not in all_data_resnet50:
+            all_data_resnet50[tile_id] = {
+                'features': features[j],
+                'individual_id': individual_ids[j],
+            }
+            all_tile_ids_resnet50.add(tile_id)
 
 
+# Convert back to arrays
+unique_tile_ids_resnet50 = sorted(list(all_tile_ids_resnet50))
+combined_features_resnet50 = []
+combined_individual_ids_resnet50 = []
 
+for tile_id in unique_tile_ids_resnet50:
+    tile_data = all_data_resnet50[tile_id]
+    combined_features_resnet50.append(tile_data['features'])
+    combined_individual_ids_resnet50.append(tile_data['individual_id'])
+    
+combined_features_resnet50 = torch.stack(combined_features_resnet50)
 
+# Load Virchow2's combined_dataset to get the processed data
+virchow2_combined_dataset = torch.load(os.path.join(output_dir, "combined_features_Predictor_genes.pt"))
 
-### Generate scatter plots for specific genes 
+# Extract common data by matching with Virchow2's tiles
+final_features_resnet50 = []
+final_individual_ids_resnet50 = []
+final_tile_ids_resnet50 = []
 
+# Create mapping for ResNet50 tiles
+resnet50_tile_to_idx = {tile_id: i for i, tile_id in enumerate(unique_tile_ids_resnet50)}
 
-from sklearn.metrics import r2_score
-from scipy.stats import spearmanr
+# Use Virchow2's tile order and find matching ResNet50 features
+for i, virchow2_tile_id in enumerate(virchow2_combined_dataset['tile_ids']):
+    if virchow2_tile_id in resnet50_tile_to_idx:
+        resnet50_idx = resnet50_tile_to_idx[virchow2_tile_id]
+        final_features_resnet50.append(combined_features_resnet50[resnet50_idx])
+        final_individual_ids_resnet50.append(combined_individual_ids_resnet50[resnet50_idx])
+        final_tile_ids_resnet50.append(virchow2_tile_id)
 
+final_features_resnet50 = torch.stack(final_features_resnet50)
 
-# Define specific genes and their corresponding cell type proportions and colors
-target_genes = {
-    'S100A6': ('Cancer_Cells_Proportion', '#E41A1C'),     # Tumor gene - Red
-    'COL6A2': ('Stromal_Proportion', '#FFFF33'),          # Stromal gene - Yellow
-    'IGKC': ('Other_Immune_Proportion', '#FF7F00')        # Other Immune gene - Orange
+# Create combined dataset for ResNet50 (using Virchow2's expression data)
+# final_features_resnet50 is already aligned with Virchow2's tile order
+combined_dataset_resnet50 = {
+    'tile_ids': final_tile_ids_resnet50,
+    'individual_ids': final_individual_ids_resnet50,
+    'features': final_features_resnet50,  # ResNet50 features
+    'expression_300genes': virchow2_combined_dataset['expression_300genes'][:len(final_tile_ids_resnet50)],  # Virchow2's expression data
+    'expression_300genes_names': virchow2_combined_dataset['expression_300genes_names'],
+    'cell_proportions': virchow2_combined_dataset['cell_proportions'][:len(final_tile_ids_resnet50)],
+    'cell_proportion_names': virchow2_combined_dataset['cell_proportion_names']
 }
 
-# Create output folder for scatter plots
-scatter_plots_folder = os.path.join(output_dir, "specific_gene_scatter_plots")
-os.makedirs(scatter_plots_folder, exist_ok=True)
 
-print(f"Target genes: {list(target_genes.keys())}")
-print(f"Output folder: {scatter_plots_folder}")
+# Save ResNet50 combined dataset
+output_file_resnet50 = os.path.join(output_dir, "combined_features_Predictor_genes_ResNet50.pt")
+torch.save(combined_dataset_resnet50, output_file_resnet50)
+print(f"\nSaved ResNet50 combined dataset to: {output_file_resnet50}")
 
-# Process each target gene
-for gene_name, (proportion_col, gene_color) in target_genes.items():
-    print(f"\nProcessing {gene_name} with {proportion_col} (color: {gene_color})...")
-    
-    # Look for the detailed CSV file for this gene
-    detailed_csv_path = os.path.join(detailed_results_dir, f"{gene_name}_detailed_predictions.csv")
-    
-    if not os.path.exists(detailed_csv_path):
-        print(f"  Warning: CSV file not found for {gene_name}: {detailed_csv_path}")
-        continue
-    
-    # Read the CSV file
-    df = pd.read_csv(detailed_csv_path)
-    
-    # Extract relevant columns
-    true_col = f"{gene_name}_True"
-    pred_col = f"{gene_name}_Predicted"
-    
-    if true_col not in df.columns or pred_col not in df.columns or proportion_col not in df.columns:
-        print(f"  Warning: Required columns not found for {gene_name}. Skipping...")
-        continue
-    
-    true_expr = df[true_col].values
-    pred_expr = df[pred_col].values
-    proportion = df[proportion_col].values
-    
-    # Create 3 separate plots for this gene
-    
-    ### Plot 1: Predicted vs Actual Expression (X-axis = Actual)
-    fig1, ax1 = plt.subplots(figsize=(8, 6))
-    ax1.scatter(true_expr, pred_expr, alpha=0.6, s=20, color=gene_color)
-    
-    # Fit linear regression line
-    lr1 = LinearRegression()
-    lr1.fit(true_expr.reshape(-1, 1), pred_expr)
-    pred_line1 = lr1.predict(true_expr.reshape(-1, 1))
-    
-    # Calculate Spearman correlation
-    rho_1, _ = spearmanr(true_expr, pred_expr)
-    
-    # Plot regression line
-    sorted_indices = np.argsort(true_expr)
-    ax1.plot(true_expr[sorted_indices], pred_line1[sorted_indices], 'k-', linewidth=2)
-    
-    # Styling
-    ax1.set_xlabel('Actual Expression', fontsize=14, fontweight='bold')
-    ax1.set_ylabel('Predicted Expression', fontsize=14, fontweight='bold')
-    ax1.grid(True, alpha=0.3)
-    
-    # Add Spearman correlation annotation in top-left
-    ax1.text(0.05, 0.95, f'Spearman ρ = {rho_1:.3f}', transform=ax1.transAxes, 
-             fontsize=12, fontweight='bold', color='black', va='top', ha='left')
-    
-    # Bold borders
-    for spine in ax1.spines.values():
-        spine.set_color('black')
-        spine.set_linewidth(2)
-    
-    # Bold tick labels
-    ax1.tick_params(axis='both', labelsize=12, width=2, length=6)
-    for label in ax1.get_xticklabels() + ax1.get_yticklabels():
-        label.set_fontweight('bold')
-    
-    # Save plot 1
-    output_plot1_path = os.path.join(scatter_plots_folder, f"{gene_name}_true_vs_predicted.png")
-    plt.tight_layout()
-    plt.savefig(output_plot1_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    ### Plot 2: Actual Expression vs Cell Type Proportion (X-axis = Proportion)
-    fig2, ax2 = plt.subplots(figsize=(8, 6))
-    ax2.scatter(proportion, true_expr, alpha=0.6, s=20, color=gene_color)
-    
-    # Fit linear regression line
-    lr2 = LinearRegression()
-    lr2.fit(proportion.reshape(-1, 1), true_expr)
-    pred_line2 = lr2.predict(proportion.reshape(-1, 1))
-    
-    # Calculate Spearman correlation
-    rho_2, _ = spearmanr(proportion, true_expr)
-    
-    # Plot regression line
-    sorted_indices_prop = np.argsort(proportion)
-    ax2.plot(proportion[sorted_indices_prop], pred_line2[sorted_indices_prop], 'k-', linewidth=2)
-    
-    # Format proportion column name for display
-    prop_display = proportion_col.replace('_', ' ').replace('Proportion', 'Proportion')
-    
-    # Styling
-    ax2.set_xlabel(prop_display, fontsize=14, fontweight='bold')
-    ax2.set_ylabel('Actual Expression', fontsize=14, fontweight='bold')
-    ax2.grid(True, alpha=0.3)
-    
-    # Add Spearman correlation annotation in top-left
-    ax2.text(0.05, 0.95, f'Spearman ρ = {rho_2:.3f}', transform=ax2.transAxes, 
-             fontsize=12, fontweight='bold', color='black', va='top', ha='left')
-    
-    # Bold borders
-    for spine in ax2.spines.values():
-        spine.set_color('black')
-        spine.set_linewidth(2)
-    
-    # Bold tick labels
-    ax2.tick_params(axis='both', labelsize=12, width=2, length=6)
-    for label in ax2.get_xticklabels() + ax2.get_yticklabels():
-        label.set_fontweight('bold')
-    
-    # Save plot 2
-    output_plot2_path = os.path.join(scatter_plots_folder, f"{gene_name}_true_vs_proportion.png")
-    plt.tight_layout()
-    plt.savefig(output_plot2_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    ### Plot 3: Predicted Expression vs Cell Type Proportion (X-axis = Proportion)
-    fig3, ax3 = plt.subplots(figsize=(8, 6))
-    ax3.scatter(proportion, pred_expr, alpha=0.6, s=20, color=gene_color)
-    
-    # Fit linear regression line
-    lr3 = LinearRegression()
-    lr3.fit(proportion.reshape(-1, 1), pred_expr)
-    pred_line3 = lr3.predict(proportion.reshape(-1, 1))
-    
-    # Calculate Spearman correlation
-    rho_3, _ = spearmanr(proportion, pred_expr)
-    
-    # Plot regression line
-    ax3.plot(proportion[sorted_indices_prop], pred_line3[sorted_indices_prop], 'k-', linewidth=2)
-    
-    # Styling
-    ax3.set_xlabel(prop_display, fontsize=14, fontweight='bold')
-    ax3.set_ylabel('Predicted Expression', fontsize=14, fontweight='bold')
-    ax3.grid(True, alpha=0.3)
-    
-    # Add Spearman correlation annotation in top-left
-    ax3.text(0.05, 0.95, f'Spearman ρ = {rho_3:.3f}', transform=ax3.transAxes, 
-             fontsize=12, fontweight='bold', color='black', va='top', ha='left')
-    
-    # Bold borders
-    for spine in ax3.spines.values():
-        spine.set_color('black')
-        spine.set_linewidth(2)
-    
-    # Bold tick labels
-    ax3.tick_params(axis='both', labelsize=12, width=2, length=6)
-    for label in ax3.get_xticklabels() + ax3.get_yticklabels():
-        label.set_fontweight('bold')
-    
-    # Save plot 3
-    output_plot3_path = os.path.join(scatter_plots_folder, f"{gene_name}_predicted_vs_proportion.png")
-    plt.tight_layout()
-    plt.savefig(output_plot3_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    print(f"  Saved scatter plots for {gene_name} (color: {gene_color}):")
-    print(f"    Actual vs Predicted: {output_plot1_path}")
-    print(f"    Proportion vs Actual: {output_plot2_path}")
-    print(f"    Proportion vs Predicted: {output_plot3_path}")
-    print(f"  Spearman ρ values - Actual vs Pred: {rho_1:.3f}, Proportion vs Actual: {rho_2:.3f}, Proportion vs Pred: {rho_3:.3f}")
-
-print(f"\nSpecific gene scatter plot generation completed!")
-print(f"All plots saved to: {scatter_plots_folder}")
-print(f"Total plots generated: {len(target_genes) * 3} plots for {len(target_genes)} genes")
+# Load Virchow2 LOIO results to find median correlation samples
+print("\nLoading Virchow2 LOIO results...")
+virchow2_regular_path = os.path.join(output_dir, "180genes_regular_correlations.csv")
 
 
+virchow2_regular_df = pd.read_csv(virchow2_regular_path, index_col=0)
+# Only take first 180 columns (180 genes)
+virchow2_regular_df = virchow2_regular_df.iloc[:, :180]
+print(f"Loaded Virchow2 regular correlations (first 180 genes): {virchow2_regular_df.shape}")
+
+# Find median correlation sample for each gene
+median_samples_regular = {}
+for gene in virchow2_regular_df.columns:
+    gene_correlations = virchow2_regular_df[gene].dropna()
+    if len(gene_correlations) > 0:
+        median_corr = gene_correlations.median()
+        # Find the sample closest to median
+        closest_sample = (gene_correlations - median_corr).abs().idxmin()
+        median_samples_regular[gene] = closest_sample
+
+print(f"Found median correlation samples for {len(median_samples_regular)} genes")
 
 
+# Extract ResNet50 data from combined dataset
+features_resnet50 = combined_dataset_resnet50['features']  # ResNet50 features
+individual_ids_resnet50 = combined_dataset_resnet50['individual_ids']
+tile_ids_resnet50 = combined_dataset_resnet50['tile_ids'] 
+expression_300genes_resnet50 = combined_dataset_resnet50['expression_300genes']  # 300 predictor genes (from Virchow2)
+expression_300genes_names_resnet50 = combined_dataset_resnet50['expression_300genes_names']
+cell_proportions_resnet50 = combined_dataset_resnet50['cell_proportions']  # 5 cell type proportions
+cell_proportion_names_resnet50 = combined_dataset_resnet50['cell_proportion_names']
 
-
-### Additional 10 genes processing and merging
-
-
-# Define the 10 specific genes to extract
-additional_genes = ['RGS11', 'VAC14', 'PTPN22', 'YAF2', 'ZFP36L2', 
-                   'IFI6', 'ODF3B', 'SLC25A36', 'CUL1', 'NUP155']
-
-print(f"Target genes: {additional_genes}")
-
-# Extract the available genes from Final_combined_expression_normalized
-
-additional_genes_data = Final_combined_expression_normalized[additional_genes].copy()
-print(f"Extracted data shape: {additional_genes_data.shape}")
-
-# Apply log2(x*10^4+1) transformation
-additional_genes_transformed = np.log2(additional_genes_data * 10000 + 1)
-print(f"Applied log2(x*10^4+1) transformation")
-print(f"Transformed data range: {additional_genes_transformed.min().min():.3f} to {additional_genes_transformed.max().max():.3f}")
-
-# Get the row index of Final_combined_expression_double_normalized_log_filtered for merging
-target_barcodes = Final_combined_expression_double_normalized_log_filtered.index
-print(f"Target barcodes (Final_combined_expression_double_normalized_log_filtered): {len(target_barcodes)}")
-
-# Find intersection of barcodes
-common_barcodes = additional_genes_transformed.index.intersection(target_barcodes)
-print(f"Common barcodes between datasets: {len(common_barcodes)}")
-
-
-additional_genes_filtered = additional_genes_transformed.loc[common_barcodes]
-print(f"Filtered additional genes data shape: {additional_genes_filtered.shape}")
-
-
-
-### XGBoost Training for Additional 10 genes 
-from scipy.stats import pearsonr
-from sklearn.linear_model import LinearRegression
-
-# Define the 10 additional genes as our target
-additional_all_selected_genes = additional_genes
-
-# Create gene to cell type mapping for additional genes (assume all are general markers)
-additional_gene_to_celltype = {}
-for gene in additional_all_selected_genes:
-    additional_gene_to_celltype[gene] = "General"  # Since these are additional genes, treat as general
-
-# Load combined dataset (same as original version)
-combined_file = "Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/Training_features/Combined_all_celltypes_Virchow2_300genes.pt"
-print(f"\nLoading combined dataset for additional genes: {combined_file}")
-
-data = torch.load(combined_file, weights_only=False)
-additional_features = data['embeddings']  # [n_tiles, n_features]
-additional_individual_ids = data['individual_ids']
-additional_tile_ids = data['tile_ids']
-
-print(f"Additional genes dataset loaded:")
-print(f"  Features shape: {additional_features.shape}")
-print(f"  Number of tiles: {len(additional_tile_ids)}")
-print(f"  Number of individuals: {len(set(additional_individual_ids))}")
-
-### Exclude specific individual
+# Exclude specific individuals
 excluded_individual = ["SU-15-27301-B1", "SU-16-02468-B1"] 
-valid_indices = [i for i, ind_id in enumerate(additional_individual_ids) if ind_id not in excluded_individual]
+valid_indices_resnet50 = [i for i, ind_id in enumerate(individual_ids_resnet50) if ind_id not in excluded_individual]
 
 # Filter all data to exclude these individuals
-additional_features = additional_features[valid_indices]
-additional_individual_ids = [additional_individual_ids[i] for i in valid_indices]
-additional_tile_ids = [additional_tile_ids[i] for i in valid_indices]
+features_resnet50 = features_resnet50[valid_indices_resnet50]
+individual_ids_resnet50 = [individual_ids_resnet50[i] for i in valid_indices_resnet50]
+tile_ids_resnet50 = [tile_ids_resnet50[i] for i in valid_indices_resnet50]
+expression_300genes_resnet50 = expression_300genes_resnet50[valid_indices_resnet50]
+cell_proportions_resnet50 = cell_proportions_resnet50[valid_indices_resnet50]
 
-print(f"After excluding individuals for additional genes:")
-print(f"  Features shape: {additional_features.shape}")
-print(f"  Number of tiles: {len(additional_tile_ids)}")
-print(f"  Number of individuals: {len(set(additional_individual_ids))}")
+print(f"ResNet50 data after excluding individuals:")
+print(f"  Features shape: {features_resnet50.shape}")
+print(f"  Number of tiles: {len(tile_ids_resnet50)}")
+print(f"  Number of individuals: {len(set(individual_ids_resnet50))}")
 
 # Get unique individuals for cross-validation
-additional_unique_individuals = sorted(list(set(additional_individual_ids)))
+unique_individuals_resnet50 = sorted(list(set(individual_ids_resnet50)))
+print(f"Unique individuals: {len(unique_individuals_resnet50)}")
 
-# Find intersected tiles between all datasets
-print(f"\nFinding intersected tiles for additional genes...")
-print(f"  Additional_genes_filtered tiles: {len(additional_genes_filtered)}")
-print(f"  Cell_proportions tiles: {len(cell_proportions_df_filtered)}")
-print(f"  Virchow2 tiles: {len(additional_tile_ids)}")
+# Initialize results for ResNet50 (1x180 table for regular and partial correlations)
+resnet50_results_regular = []
+resnet50_results_partial = []
 
-# Get tile sets
-additional_genes_tiles = set(additional_genes_filtered.index)
-cell_proportions_tiles = set(cell_proportions_df_filtered.index)
-additional_virchow2_tiles = set(additional_tile_ids)
-
-# Find intersection of all three datasets
-additional_intersected_tiles = additional_genes_tiles & cell_proportions_tiles & additional_virchow2_tiles
-additional_intersected_tiles = sorted(list(additional_intersected_tiles))
-
-print(f"  Intersected tiles for additional genes: {len(additional_intersected_tiles)}")
-
-# Create mapping from tile_id to index in Virchow2 data
-additional_virchow_tile_to_idx = {}
-for i, tile_id in enumerate(additional_tile_ids):
-    additional_virchow_tile_to_idx[tile_id] = i
-
-# Extract data for intersected tiles only
-additional_matched_features = []
-additional_matched_individual_ids = []
-additional_matched_tile_ids = []
-
-for tile in additional_intersected_tiles:
-    if tile in additional_virchow_tile_to_idx:
-        virchow_idx = additional_virchow_tile_to_idx[tile]
-        additional_matched_features.append(additional_features[virchow_idx])
-        additional_matched_individual_ids.append(additional_individual_ids[virchow_idx])
-        additional_matched_tile_ids.append(tile)
-
-# Convert to arrays
-additional_features = torch.stack(additional_matched_features) if additional_matched_features else torch.empty(0)
-additional_individual_ids = additional_matched_individual_ids
-additional_tile_ids = additional_matched_tile_ids
-
-# Get expression data for 10 additional genes (intersected tiles only)
-additional_marker_expression_df = additional_genes_filtered.loc[
-    additional_intersected_tiles, additional_all_selected_genes
-]
-
-additional_marker_expression = additional_marker_expression_df.values
-
-# Get cell type proportions for intersected tiles
-additional_intersected_cell_proportions = cell_proportions_df_filtered.loc[additional_intersected_tiles]
-
-additional_marker_genes = additional_marker_expression_df.columns.tolist()
-additional_unique_individuals = sorted(list(set(additional_individual_ids)))
-
-print(f"\nFinal intersected data for additional genes:")
-print(f"  Features shape: {additional_features.shape}")
-print(f"  Marker expression shape: {additional_marker_expression.shape}")
-print(f"  Cell proportions shape: {additional_intersected_cell_proportions.shape}")
-print(f"  Number of genes: {len(additional_marker_genes)}")
-print(f"  Number of tiles: {len(additional_tile_ids)}")
-print(f"  Number of individuals: {len(additional_unique_individuals)}")
-
-# XGBoost parameters (same as original)
-additional_xgb_params = {
+# XGBoost parameters (same as Virchow2)
+xgb_params = {
     'objective': 'reg:squarederror',
     'eval_metric': 'rmse',
     'tree_method': 'hist',
@@ -1431,31 +960,142 @@ additional_xgb_params = {
     'max_depth': 12,
     'seed': 42
 }
-additional_num_boost_round = 800
+num_boost_round = 800
 
-# Cell type proportion mapping for partial correlation (use both Cancer and Stromal for additional genes)
-additional_celltype_to_proportion_cancer = {
-    "General": "Cancer_Cells_Proportion"  # Use Cancer proportion for first partial correlation
-}
+from scipy.stats import pearsonr
+from sklearn.linear_model import LinearRegression
+import xgboost as xgb
+from sklearn.preprocessing import StandardScaler
 
-additional_celltype_to_proportion_stromal = {
-    "General": "Stromal_Proportion"  # Use Stromal proportion for second partial correlation
-}
 
-# Function to calculate partial correlation with single control variable (same as original)
-def additional_partial_correlation(x, y, control):
-    """
-    Calculate partial correlation between x and y, controlling for single control variable
-    """
-    control = control.reshape(-1, 1)
+print(f"\nStarting simplified CV for ResNet50 with {len(expression_300genes_names_resnet50)} genes...")
+
+# Simplified CV loop for each gene
+for gene_idx, gene_name in enumerate(expression_300genes_names_resnet50):
+    print(f"\nProcessing gene {gene_idx + 1}/{len(expression_300genes_names_resnet50)}: {gene_name}")
     
-    # Regress x on control, get residuals
-    reg_x = LinearRegression().fit(control, x)
-    residual_x = x - reg_x.predict(control)
+    # Find the median correlation sample for this gene from Virchow2 results
+    if gene_name in median_samples_regular:
+        target_individual = median_samples_regular[gene_name]
+        print(f"  Using median correlation sample: {target_individual}")
+    else:
+        print(f"  No median sample found for {gene_name}, skipping...")
+        resnet50_results_regular.append(0.0)
+        resnet50_results_partial.append(0.0)
+        continue
     
-    # Regress y on control, get residuals  
-    reg_y = LinearRegression().fit(control, y)
-    residual_y = y - reg_y.predict(control)
+    # Check if target individual exists in ResNet50 data
+    if target_individual not in individual_ids_resnet50:
+        print(f"  Target individual {target_individual} not found in ResNet50 data, skipping...")
+        resnet50_results_regular.append(0.0)
+        resnet50_results_partial.append(0.0)
+        continue
+    
+    # Split data: leave out target individual
+    train_indices = [i for i, ind_id in enumerate(individual_ids_resnet50) if ind_id != target_individual]
+    test_indices = [i for i, ind_id in enumerate(individual_ids_resnet50) if ind_id == target_individual]
+    
+    if len(test_indices) == 0:
+        print(f"  No test samples for {target_individual}, skipping...")
+        resnet50_results_regular.append(0.0)
+        resnet50_results_partial.append(0.0)
+        continue
+        
+    # Get train/test data
+    X_train = features_resnet50[train_indices]
+    y_train = expression_300genes_resnet50[train_indices, gene_idx]
+    X_test = features_resnet50[test_indices]
+    y_test = expression_300genes_resnet50[test_indices, gene_idx]
+    
+    # Create DMatrix for XGBoost
+    dtrain = xgb.DMatrix(X_train.numpy(), label=y_train.numpy())
+    dtest = xgb.DMatrix(X_test.numpy(), label=y_test.numpy())
+    
+    # Train model using same parameters as Virchow2
+    model = xgb.train(
+        xgb_params,
+        dtrain,
+        num_boost_round=num_boost_round,
+        verbose_eval=False
+    )
+    
+    # Make predictions
+    y_pred = model.predict(dtest)
+    
+    # Calculate regular correlation
+    if len(y_test) > 1:
+        regular_correlation, _ = pearsonr(y_test.numpy(), y_pred)
+        regular_correlation = regular_correlation if not np.isnan(regular_correlation) else 0.0
+        
+        # Calculate partial correlation controlling for cell proportions
+        test_cell_props = cell_proportions_resnet50[test_indices]
+        if len(test_cell_props) == len(y_pred):
+            partial_correlation = partial_correlation_clr_resnet50(y_test.numpy(), y_pred, test_cell_props)
+        else:
+            partial_correlation = 0.0
+    else:
+        regular_correlation = 0.0
+        partial_correlation = 0.0
+    
+    resnet50_results_regular.append(regular_correlation)
+    resnet50_results_partial.append(partial_correlation)
+    print(f"  Regular Correlation: {regular_correlation:.4f}, Partial Correlation: {partial_correlation:.4f}")
+
+# Save ResNet50 results as 1x300 tables (regular and partial correlations)
+resnet50_results_regular_df = pd.DataFrame([resnet50_results_regular], columns=expression_300genes_names_resnet50, index=['ResNet50'])
+resnet50_results_partial_df = pd.DataFrame([resnet50_results_partial], columns=expression_300genes_names_resnet50, index=['ResNet50'])
+
+resnet50_regular_output_path = os.path.join(output_dir, "180genes_ResNet50_regular_correlations.csv")
+resnet50_partial_output_path = os.path.join(output_dir, "180genes_ResNet50_partial_correlations_clr.csv")
+
+resnet50_results_regular_df.to_csv(resnet50_regular_output_path)
+resnet50_results_partial_df.to_csv(resnet50_partial_output_path)
+
+print(f"\nSaved ResNet50 regular correlations to: {resnet50_regular_output_path}")
+print(f"Saved ResNet50 partial correlations to: {resnet50_partial_output_path}")
+
+
+
+
+### UNI2h Feature Processing and Simplified CV for 180 Predictor Genes
+
+print("\n" + "="*80)
+print("UNI2H FEATURE PROCESSING AND SIMPLIFIED CV FOR 180 PREDICTOR GENES")
+print("="*80)
+
+# CLR transformation function for proportions (needed for partial correlation)
+def clr_transform_uni2h(proportions):
+    """
+    Apply centered log-ratio (CLR) transformation to proportions
+    CLR(x) = log(x_i / geometric_mean(x))
+    """
+    # Add small epsilon to avoid log(0)
+    epsilon = 1e-6
+    proportions_adj = proportions + epsilon
+    
+    # Calculate geometric mean
+    geometric_mean = np.exp(np.mean(np.log(proportions_adj), axis=1, keepdims=True))
+    
+    # Apply CLR transformation
+    clr_props = np.log(proportions_adj / geometric_mean)
+    
+    return clr_props
+
+# Function to calculate partial correlation controlling for CLR-transformed cell proportions
+def partial_correlation_clr_uni2h(x, y, cell_props):
+    """
+    Calculate partial correlation between x and y, controlling for CLR-transformed cell proportions
+    """
+    # Apply CLR transformation to cell proportions
+    clr_props = clr_transform_uni2h(cell_props.numpy() if torch.is_tensor(cell_props) else cell_props)
+    
+    # Regress x on CLR-transformed proportions, get residuals
+    reg_x = LinearRegression().fit(clr_props, x)
+    residual_x = x - reg_x.predict(clr_props)
+    
+    # Regress y on CLR-transformed proportions, get residuals  
+    reg_y = LinearRegression().fit(clr_props, y)
+    residual_y = y - reg_y.predict(clr_props)
     
     # Correlation between residuals = partial correlation
     if len(residual_x) > 1:
@@ -1464,228 +1104,2071 @@ def additional_partial_correlation(x, y, control):
     else:
         return 0.0
 
-# Initialize results DataFrames for 3 types of correlations
-additional_results_df_regular = pd.DataFrame(index=additional_unique_individuals, columns=additional_all_selected_genes)
-additional_results_df_partial_cancer = pd.DataFrame(index=additional_unique_individuals, columns=additional_all_selected_genes)
-additional_results_df_partial_stromal = pd.DataFrame(index=additional_unique_individuals, columns=additional_all_selected_genes)
+# Load UNI2h features
+features_dir = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features"
+feature_files_uni2h = [
+    "Cancer Cells_training_precomputed_features_UNI2h.pt",
+    "Normal Epithelial Cells_training_precomputed_features_UNI2h.pt", 
+    "Other Immune Cells_training_precomputed_features_UNI2h.pt",
+    "Stromal Cells_training_precomputed_features_UNI2h.pt",
+    "T Cells_training_precomputed_features_UNI2h.pt"
+]
 
-# Create output directories
-additional_xgb_output_dir = os.path.join(output_dir, "additional_genes_xgboost_results")
-additional_detailed_results_dir = os.path.join(output_dir, "additional_genes_detailed_results")
-os.makedirs(additional_xgb_output_dir, exist_ok=True)
-os.makedirs(additional_detailed_results_dir, exist_ok=True)
+print(f"Loading UNI2h features from {len(feature_files_uni2h)} files...")
 
-### Main XGBoost training loop for each additional gene
-for gene_idx, gene_name in enumerate(additional_all_selected_genes):
-    gene_celltype = additional_gene_to_celltype[gene_name]
-    proportion_col_cancer = additional_celltype_to_proportion_cancer[gene_celltype]
-    proportion_col_stromal = additional_celltype_to_proportion_stromal[gene_celltype]
+# Load all UNI2h feature files and collect unique tiles
+all_tile_ids_uni2h = set()
+all_data_uni2h = {}
+for i, file_name in enumerate(feature_files_uni2h):
+    file_path = os.path.join(features_dir, file_name)
+
+    data = torch.load(file_path, weights_only=False)
     
-    print(f"\n{'='*60}")
-    print(f"Processing additional gene {gene_idx + 1}/{len(additional_all_selected_genes)}: {gene_name}")
-    print(f"Cell type: {gene_celltype}")
-    print(f"Cancer proportion column: {proportion_col_cancer}")
-    print(f"Stromal proportion column: {proportion_col_stromal}")
-    print(f"{'='*60}")
+    # Extract information
+    features = data['embeddings']  # [n_tiles, n_features]
+    individual_ids = data['individual_ids']
+    tile_ids = data['tile_ids']
     
-    gene_predictions = {}
-    gene_actuals = {}
+
+    # Store data for each unique tile
+    for j, tile_id in enumerate(tile_ids):
+        if tile_id not in all_data_uni2h:
+            all_data_uni2h[tile_id] = {
+                'features': features[j],
+                'individual_id': individual_ids[j],
+            }
+            all_tile_ids_uni2h.add(tile_id)
+
+
+# Convert back to arrays
+unique_tile_ids_uni2h = sorted(list(all_tile_ids_uni2h))
+combined_features_uni2h = []
+combined_individual_ids_uni2h = []
+
+for tile_id in unique_tile_ids_uni2h:
+    tile_data = all_data_uni2h[tile_id]
+    combined_features_uni2h.append(tile_data['features'])
+    combined_individual_ids_uni2h.append(tile_data['individual_id'])
     
-    ### Leave-one-individual-out cross-validation
-    for test_individual in additional_unique_individuals:
-        print(f"  Testing on individual: {test_individual}")
-        
-        # Split data
-        train_indices = [i for i, ind_id in enumerate(additional_individual_ids) if ind_id != test_individual]
-        test_indices = [i for i, ind_id in enumerate(additional_individual_ids) if ind_id == test_individual]
-        
-        if len(test_indices) == 0:
-            print(f"    Warning: No test data for {test_individual}")
-            continue
-            
-        # Get train/test data
-        X_train = additional_features[train_indices]
-        y_train = additional_marker_expression[train_indices, gene_idx]
-        X_test = additional_features[test_indices]
-        y_test = additional_marker_expression[test_indices, gene_idx]
-        
-        print(f"    Train samples: {len(X_train)}, Test samples: {len(X_test)}")
-        
-        # Create DMatrix for XGBoost
-        dtrain = xgb.DMatrix(X_train, label=y_train)
-        dtest = xgb.DMatrix(X_test, label=y_test)
-        
-        # Train model
-        model = xgb.train(
-            additional_xgb_params,
-            dtrain,
-            num_boost_round=additional_num_boost_round,
-            verbose_eval=False
-        )
-        
-        # Make predictions
-        y_pred = model.predict(dtest)
-        
-        # Store results
-        gene_predictions[test_individual] = y_pred
-        gene_actuals[test_individual] = y_test
-        
-        print(f"    Predicted values: min={y_pred.min():.4f}, max={y_pred.max():.4f}, mean={y_pred.mean():.4f}")
-        print(f"    Actual values: min={y_test.min():.4f}, max={y_test.max():.4f}, mean={y_test.mean():.4f}")
+combined_features_uni2h = torch.stack(combined_features_uni2h)
+
+# Extract common data by matching with Virchow2's tiles
+final_features_uni2h = []
+final_individual_ids_uni2h = []
+final_tile_ids_uni2h = []
+
+# Create mapping for UNI2h tiles
+uni2h_tile_to_idx = {tile_id: i for i, tile_id in enumerate(unique_tile_ids_uni2h)}
+
+# Use Virchow2's tile order and find matching UNI2h features
+for i, virchow2_tile_id in enumerate(virchow2_combined_dataset['tile_ids']):
+    if virchow2_tile_id in uni2h_tile_to_idx:
+        uni2h_idx = uni2h_tile_to_idx[virchow2_tile_id]
+        final_features_uni2h.append(combined_features_uni2h[uni2h_idx])
+        final_individual_ids_uni2h.append(combined_individual_ids_uni2h[uni2h_idx])
+        final_tile_ids_uni2h.append(virchow2_tile_id)
+
+final_features_uni2h = torch.stack(final_features_uni2h)
+
+# Create combined dataset for UNI2h (using Virchow2's expression data)
+# final_features_uni2h is already aligned with Virchow2's tile order
+combined_dataset_uni2h = {
+    'tile_ids': final_tile_ids_uni2h,
+    'individual_ids': final_individual_ids_uni2h,
+    'features': final_features_uni2h,  # UNI2h features
+    'expression_300genes': virchow2_combined_dataset['expression_300genes'][:len(final_tile_ids_uni2h)],  # Virchow2's expression data
+    'expression_300genes_names': virchow2_combined_dataset['expression_300genes_names'],
+    'cell_proportions': virchow2_combined_dataset['cell_proportions'][:len(final_tile_ids_uni2h)],
+    'cell_proportion_names': virchow2_combined_dataset['cell_proportion_names']
+}
+
+# Save UNI2h combined dataset
+output_file_uni2h = os.path.join(output_dir, "combined_features_Predictor_genes_UNI2h.pt")
+torch.save(combined_dataset_uni2h, output_file_uni2h)
+print(f"\nSaved UNI2h combined dataset to: {output_file_uni2h}")
+
+# Extract UNI2h data from combined dataset
+features_uni2h = combined_dataset_uni2h['features']  # UNI2h features
+individual_ids_uni2h = combined_dataset_uni2h['individual_ids']
+tile_ids_uni2h = combined_dataset_uni2h['tile_ids'] 
+expression_300genes_uni2h = combined_dataset_uni2h['expression_300genes']  # 300 predictor genes (from Virchow2)
+expression_300genes_names_uni2h = combined_dataset_uni2h['expression_300genes_names']
+cell_proportions_uni2h = combined_dataset_uni2h['cell_proportions']  # 5 cell type proportions
+cell_proportion_names_uni2h = combined_dataset_uni2h['cell_proportion_names']
+
+# Exclude specific individuals
+excluded_individual = ["SU-15-27301-B1", "SU-16-02468-B1"] 
+valid_indices_uni2h = [i for i, ind_id in enumerate(individual_ids_uni2h) if ind_id not in excluded_individual]
+
+# Filter all data to exclude these individuals
+features_uni2h = features_uni2h[valid_indices_uni2h]
+individual_ids_uni2h = [individual_ids_uni2h[i] for i in valid_indices_uni2h]
+tile_ids_uni2h = [tile_ids_uni2h[i] for i in valid_indices_uni2h]
+expression_300genes_uni2h = expression_300genes_uni2h[valid_indices_uni2h]
+cell_proportions_uni2h = cell_proportions_uni2h[valid_indices_uni2h]
+
+print(f"UNI2h data after excluding individuals:")
+print(f"  Features shape: {features_uni2h.shape}")
+print(f"  Number of tiles: {len(tile_ids_uni2h)}")
+print(f"  Number of individuals: {len(set(individual_ids_uni2h))}")
+
+# Get unique individuals for cross-validation
+unique_individuals_uni2h = sorted(list(set(individual_ids_uni2h)))
+print(f"Unique individuals: {len(unique_individuals_uni2h)}")
+
+# Initialize results for UNI2h (1x180 table for regular and partial correlations)
+uni2h_results_regular = []
+uni2h_results_partial = []
+
+# XGBoost parameters (same as Virchow2)
+xgb_params = {
+    'objective': 'reg:squarederror',
+    'eval_metric': 'rmse',
+    'tree_method': 'hist',
+    'n_jobs': -1,
+    'eta': 0.01,
+    'gamma': 0,
+    'min_child_weight': 5,
+    'colsample_bytree': 0.05,
+    'subsample': 0.5,
+    'alpha': 0.1,
+    'lambda': 0.01,
+    'max_depth': 12,
+    'seed': 42
+}
+num_boost_round = 800
+
+print(f"\nStarting simplified CV for UNI2h with {len(expression_300genes_names_uni2h)} genes...")
+
+# Simplified CV loop for each gene
+for gene_idx, gene_name in enumerate(expression_300genes_names_uni2h):
+    print(f"\nProcessing gene {gene_idx + 1}/{len(expression_300genes_names_uni2h)}: {gene_name}")
     
-    ### Calculate correlations for each individual
-    individual_correlations_regular = {}
-    individual_correlations_partial_cancer = {}
-    individual_correlations_partial_stromal = {}
-    
-    for individual in additional_unique_individuals:
-        if individual in gene_predictions and individual in gene_actuals:
-            pred_vals = gene_predictions[individual]
-            actual_vals = gene_actuals[individual]
-            
-            # Get indices for this individual's samples
-            individual_indices = [i for i, ind_id in enumerate(additional_individual_ids) if ind_id == individual]
-            
-            if len(pred_vals) > 1 and len(individual_indices) > 1:  # Need at least 2 points for correlation
-                # Regular Pearson correlation
-                regular_corr, _ = pearsonr(actual_vals, pred_vals)
-                individual_correlations_regular[individual] = regular_corr if not np.isnan(regular_corr) else 0.0
-                
-                # Partial correlation controlling for Cancer cells proportion
-                individual_cancer_props = additional_intersected_cell_proportions.loc[
-                    additional_intersected_cell_proportions.index[individual_indices], proportion_col_cancer
-                ].values
-                
-                if len(individual_cancer_props) == len(pred_vals):
-                    partial_corr_cancer = additional_partial_correlation(actual_vals, pred_vals, individual_cancer_props)
-                    individual_correlations_partial_cancer[individual] = partial_corr_cancer
-                else:
-                    individual_correlations_partial_cancer[individual] = 0.0
-                
-                # Partial correlation controlling for Stromal cells proportion
-                individual_stromal_props = additional_intersected_cell_proportions.loc[
-                    additional_intersected_cell_proportions.index[individual_indices], proportion_col_stromal
-                ].values
-                
-                if len(individual_stromal_props) == len(pred_vals):
-                    partial_corr_stromal = additional_partial_correlation(actual_vals, pred_vals, individual_stromal_props)
-                    individual_correlations_partial_stromal[individual] = partial_corr_stromal
-                else:
-                    individual_correlations_partial_stromal[individual] = 0.0
-            else:
-                individual_correlations_regular[individual] = 0.0
-                individual_correlations_partial_cancer[individual] = 0.0
-                individual_correlations_partial_stromal[individual] = 0.0
-        else:
-            individual_correlations_regular[individual] = np.nan
-            individual_correlations_partial_cancer[individual] = np.nan
-            individual_correlations_partial_stromal[individual] = np.nan
-    
-    ### Update results DataFrames
-    for individual in additional_unique_individuals:
-        if individual in individual_correlations_regular:
-            additional_results_df_regular.loc[individual, gene_name] = individual_correlations_regular[individual]
-        if individual in individual_correlations_partial_cancer:
-            additional_results_df_partial_cancer.loc[individual, gene_name] = individual_correlations_partial_cancer[individual]
-        if individual in individual_correlations_partial_stromal:
-            additional_results_df_partial_stromal.loc[individual, gene_name] = individual_correlations_partial_stromal[individual]
-    
-    ### Calculate and print summary statistics
-    valid_correlations_regular = [corr for corr in individual_correlations_regular.values() if not np.isnan(corr)]
-    valid_correlations_partial_cancer = [corr for corr in individual_correlations_partial_cancer.values() if not np.isnan(corr)]
-    valid_correlations_partial_stromal = [corr for corr in individual_correlations_partial_stromal.values() if not np.isnan(corr)]
-    
-    print(f"\n  Additional Gene {gene_name} Summary:")
-    if valid_correlations_regular:
-        mean_regular = np.mean(valid_correlations_regular)
-        median_regular = np.median(valid_correlations_regular)
-        print(f"    Regular Pearson - Mean: {mean_regular:.4f}, Median: {median_regular:.4f}")
-    
-    if valid_correlations_partial_cancer:
-        mean_partial_cancer = np.mean(valid_correlations_partial_cancer)
-        median_partial_cancer = np.median(valid_correlations_partial_cancer)
-        print(f"    Partial correlation (Cancer control) - Mean: {mean_partial_cancer:.4f}, Median: {median_partial_cancer:.4f}")
-    
-    if valid_correlations_partial_stromal:
-        mean_partial_stromal = np.mean(valid_correlations_partial_stromal)
-        median_partial_stromal = np.median(valid_correlations_partial_stromal)
-        print(f"    Partial correlation (Stromal control) - Mean: {mean_partial_stromal:.4f}, Median: {median_partial_stromal:.4f}")
-    
-    print(f"    Valid individuals: Regular={len(valid_correlations_regular)}, Cancer_Partial={len(valid_correlations_partial_cancer)}, Stromal_Partial={len(valid_correlations_partial_stromal)}/{len(additional_unique_individuals)}")
-    
-    # Calculate mediation ratios if available
-    if valid_correlations_regular and valid_correlations_partial_cancer:
-        mean_mediation_ratio_cancer = (np.mean(valid_correlations_regular) - np.mean(valid_correlations_partial_cancer)) / np.mean(valid_correlations_regular) if np.mean(valid_correlations_regular) != 0 else 0
-        print(f"    Mediation ratio (Cancer effect): {mean_mediation_ratio_cancer:.4f}")
-    
-    if valid_correlations_regular and valid_correlations_partial_stromal:
-        mean_mediation_ratio_stromal = (np.mean(valid_correlations_regular) - np.mean(valid_correlations_partial_stromal)) / np.mean(valid_correlations_regular) if np.mean(valid_correlations_regular) != 0 else 0
-        print(f"    Mediation ratio (Stromal effect): {mean_mediation_ratio_stromal:.4f}")
-    
-    ### Save detailed gene results (copied from original version)
-    # Collect all predictions and cell proportions for this gene
-    all_tile_ids = []
-    all_actual = []
-    all_predicted = []
-    all_cell_props = []
-    
-    for individual in additional_unique_individuals:
-        individual_indices = [i for i, ind_id in enumerate(additional_individual_ids) if ind_id == individual]
-        if individual_indices:
-            # Get actual values
-            actual_vals = additional_marker_expression[individual_indices, gene_idx]
-            
-            # Get predictions from the trained model
-            individual_features = additional_features[individual_indices]
-            pred_vals = model.predict(xgb.DMatrix(individual_features.numpy()))
-            
-            # Get cell proportions
-            individual_cell_props_all = additional_intersected_cell_proportions.iloc[individual_indices]
-            
-            # Store data
-            for i, idx in enumerate(individual_indices):
-                all_tile_ids.append(additional_tile_ids[idx])
-                all_actual.append(actual_vals[i])
-                all_predicted.append(pred_vals[i])
-                # Get all 5 cell type proportions for this tile
-                tile_props = individual_cell_props_all.iloc[i]
-                all_cell_props.append([
-                    tile_props['Cancer_Cells_Proportion'],
-                    tile_props['Normal_Epithelial_Proportion'], 
-                    tile_props['T_Cells_Proportion'],
-                    tile_props['Stromal_Proportion'],
-                    tile_props['Other_Immune_Proportion']
-                ])
-    
-    # Create detailed DataFrame for this gene
-    if all_tile_ids:
-        detailed_df = pd.DataFrame({
-            'Tile_ID': all_tile_ids,
-            f'{gene_name}_True': all_actual,
-            f'{gene_name}_Predicted': all_predicted
-        })
-        
-        # Add cell type proportions
-        cell_type_names = ['Cancer_Cells', 'Normal_Epithelial', 'T_Cells', 'Stromal', 'Other_Immune']
-        for i, cell_type in enumerate(cell_type_names):
-            detailed_df[f'{cell_type}_Proportion'] = [props[i] for props in all_cell_props]
-        
-        # Save detailed CSV directly to additional_genes_detailed_results folder
-        detailed_csv_path = os.path.join(additional_detailed_results_dir, f"{gene_name}_detailed_predictions.csv")
-        detailed_df.to_csv(detailed_csv_path, index=False)
-        print(f"  Saved detailed predictions to: {detailed_csv_path}")
+    # Find the median correlation sample for this gene from Virchow2 results
+    if gene_name in median_samples_regular:
+        target_individual = median_samples_regular[gene_name]
+        print(f"  Using median correlation sample: {target_individual}")
     else:
-        print(f"  Warning: No data available for detailed CSV for gene {gene_name}")
+        print(f"  No median sample found for {gene_name}, skipping...")
+        uni2h_results_regular.append(0.0)
+        uni2h_results_partial.append(0.0)
+        continue
+    
+    # Check if target individual exists in UNI2h data
+    if target_individual not in individual_ids_uni2h:
+        print(f"  Target individual {target_individual} not found in UNI2h data, skipping...")
+        uni2h_results_regular.append(0.0)
+        uni2h_results_partial.append(0.0)
+        continue
+    
+    # Split data: leave out target individual
+    train_indices = [i for i, ind_id in enumerate(individual_ids_uni2h) if ind_id != target_individual]
+    test_indices = [i for i, ind_id in enumerate(individual_ids_uni2h) if ind_id == target_individual]
+    
+    if len(test_indices) == 0:
+        print(f"  No test samples for {target_individual}, skipping...")
+        uni2h_results_regular.append(0.0)
+        uni2h_results_partial.append(0.0)
+        continue
+        
+    # Get train/test data
+    X_train = features_uni2h[train_indices]
+    y_train = expression_300genes_uni2h[train_indices, gene_idx]
+    X_test = features_uni2h[test_indices]
+    y_test = expression_300genes_uni2h[test_indices, gene_idx]
+    
+    # Create DMatrix for XGBoost
+    dtrain = xgb.DMatrix(X_train.numpy(), label=y_train.numpy())
+    dtest = xgb.DMatrix(X_test.numpy(), label=y_test.numpy())
+    
+    # Train model using same parameters as Virchow2
+    model = xgb.train(
+        xgb_params,
+        dtrain,
+        num_boost_round=num_boost_round,
+        verbose_eval=False
+    )
+    
+    # Make predictions
+    y_pred = model.predict(dtest)
+    
+    # Calculate regular correlation
+    if len(y_test) > 1:
+        regular_correlation, _ = pearsonr(y_test.numpy(), y_pred)
+        regular_correlation = regular_correlation if not np.isnan(regular_correlation) else 0.0
+        
+        # Calculate partial correlation controlling for cell proportions
+        test_cell_props = cell_proportions_uni2h[test_indices]
+        if len(test_cell_props) == len(y_pred):
+            partial_correlation = partial_correlation_clr_uni2h(y_test.numpy(), y_pred, test_cell_props)
+        else:
+            partial_correlation = 0.0
+    else:
+        regular_correlation = 0.0
+        partial_correlation = 0.0
+    
+    uni2h_results_regular.append(regular_correlation)
+    uni2h_results_partial.append(partial_correlation)
+    print(f"  Regular Correlation: {regular_correlation:.4f}, Partial Correlation: {partial_correlation:.4f}")
 
-# Save results to CSV (3 output files)
-additional_regular_output_path = os.path.join(additional_xgb_output_dir, "additional_genes_regular_correlations.csv")
-additional_partial_cancer_output_path = os.path.join(additional_xgb_output_dir, "additional_genes_partial_correlations_cancer.csv")
-additional_partial_stromal_output_path = os.path.join(additional_xgb_output_dir, "additional_genes_partial_correlations_stromal.csv")
+# Save UNI2h results as 1x300 tables (regular and partial correlations)
+uni2h_results_regular_df = pd.DataFrame([uni2h_results_regular], columns=expression_300genes_names_uni2h, index=['UNI2h'])
+uni2h_results_partial_df = pd.DataFrame([uni2h_results_partial], columns=expression_300genes_names_uni2h, index=['UNI2h'])
 
-additional_results_df_regular.to_csv(additional_regular_output_path)
-additional_results_df_partial_cancer.to_csv(additional_partial_cancer_output_path)
-additional_results_df_partial_stromal.to_csv(additional_partial_stromal_output_path)
+uni2h_regular_output_path = os.path.join(output_dir, "180genes_UNI2h_regular_correlations.csv")
+uni2h_partial_output_path = os.path.join(output_dir, "180genes_UNI2h_partial_correlations_clr.csv")
+
+uni2h_results_regular_df.to_csv(uni2h_regular_output_path)
+uni2h_results_partial_df.to_csv(uni2h_partial_output_path)
+
+print(f"\nSaved UNI2h regular correlations to: {uni2h_regular_output_path}")
+print(f"Saved UNI2h partial correlations to: {uni2h_partial_output_path}")
 
 
+
+
+### Virchow Feature Processing and Simplified CV for 180 Predictor Genes
+
+print("\n" + "="*80)
+print("VIRCHOW FEATURE PROCESSING AND SIMPLIFIED CV FOR 180 PREDICTOR GENES")
+print("="*80)
+
+# CLR transformation function for proportions (needed for partial correlation)
+def clr_transform_virchow(proportions):
+    """
+    Apply centered log-ratio (CLR) transformation to proportions
+    CLR(x) = log(x_i / geometric_mean(x))
+    """
+    # Add small epsilon to avoid log(0)
+    epsilon = 1e-6
+    proportions_adj = proportions + epsilon
+    
+    # Calculate geometric mean
+    geometric_mean = np.exp(np.mean(np.log(proportions_adj), axis=1, keepdims=True))
+    
+    # Apply CLR transformation
+    clr_props = np.log(proportions_adj / geometric_mean)
+    
+    return clr_props
+
+# Function to calculate partial correlation controlling for CLR-transformed cell proportions
+def partial_correlation_clr_virchow(x, y, cell_props):
+    """
+    Calculate partial correlation between x and y, controlling for CLR-transformed cell proportions
+    """
+    # Apply CLR transformation to cell proportions
+    clr_props = clr_transform_virchow(cell_props.numpy() if torch.is_tensor(cell_props) else cell_props)
+    
+    # Regress x on CLR-transformed proportions, get residuals
+    reg_x = LinearRegression().fit(clr_props, x)
+    residual_x = x - reg_x.predict(clr_props)
+    
+    # Regress y on CLR-transformed proportions, get residuals  
+    reg_y = LinearRegression().fit(clr_props, y)
+    residual_y = y - reg_y.predict(clr_props)
+    
+    # Correlation between residuals = partial correlation
+    if len(residual_x) > 1:
+        partial_corr, p_value = pearsonr(residual_x, residual_y)
+        return partial_corr if not np.isnan(partial_corr) else 0.0
+    else:
+        return 0.0
+
+# Load Virchow features
+features_dir = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features"
+feature_files_virchow = [
+    "Cancer Cells_training_precomputed_features_Virchow.pt",
+    "Normal Epithelial Cells_training_precomputed_features_Virchow.pt", 
+    "Other Immune Cells_training_precomputed_features_Virchow.pt",
+    "Stromal Cells_training_precomputed_features_Virchow.pt",
+    "T Cells_training_precomputed_features_Virchow.pt"
+]
+
+print(f"Loading Virchow features from {len(feature_files_virchow)} files...")
+
+# Load all Virchow feature files and collect unique tiles
+all_tile_ids_virchow = set()
+all_data_virchow = {}
+for i, file_name in enumerate(feature_files_virchow):
+    file_path = os.path.join(features_dir, file_name)
+    data = torch.load(file_path, weights_only=False)
+    
+    # Extract information
+    features = data['embeddings']  # [n_tiles, n_features]
+    individual_ids = data['individual_ids']
+    tile_ids = data['tile_ids']
+    
+    # Store data for each unique tile
+    for j, tile_id in enumerate(tile_ids):
+        if tile_id not in all_data_virchow:
+            all_data_virchow[tile_id] = {
+                'features': features[j],
+                'individual_id': individual_ids[j],
+            }
+            all_tile_ids_virchow.add(tile_id)
+
+# Convert back to arrays
+unique_tile_ids_virchow = sorted(list(all_tile_ids_virchow))
+combined_features_virchow = []
+combined_individual_ids_virchow = []
+
+for tile_id in unique_tile_ids_virchow:
+    tile_data = all_data_virchow[tile_id]
+    combined_features_virchow.append(tile_data['features'])
+    combined_individual_ids_virchow.append(tile_data['individual_id'])
+    
+combined_features_virchow = torch.stack(combined_features_virchow)
+
+# Extract common data by matching with Virchow2's tiles
+final_features_virchow = []
+final_individual_ids_virchow = []
+final_tile_ids_virchow = []
+
+# Create mapping for Virchow tiles
+virchow_tile_to_idx = {tile_id: i for i, tile_id in enumerate(unique_tile_ids_virchow)}
+
+# Use Virchow2's tile order and find matching Virchow features
+for i, virchow2_tile_id in enumerate(virchow2_combined_dataset['tile_ids']):
+    if virchow2_tile_id in virchow_tile_to_idx:
+        virchow_idx = virchow_tile_to_idx[virchow2_tile_id]
+        final_features_virchow.append(combined_features_virchow[virchow_idx])
+        final_individual_ids_virchow.append(combined_individual_ids_virchow[virchow_idx])
+        final_tile_ids_virchow.append(virchow2_tile_id)
+
+final_features_virchow = torch.stack(final_features_virchow)
+
+# Create combined dataset for Virchow (using Virchow2's expression data)
+combined_dataset_virchow = {
+    'tile_ids': final_tile_ids_virchow,
+    'individual_ids': final_individual_ids_virchow,
+    'features': final_features_virchow,  # Virchow features
+    'expression_300genes': virchow2_combined_dataset['expression_300genes'][:len(final_tile_ids_virchow)],
+    'expression_300genes_names': virchow2_combined_dataset['expression_300genes_names'],
+    'cell_proportions': virchow2_combined_dataset['cell_proportions'][:len(final_tile_ids_virchow)],
+    'cell_proportion_names': virchow2_combined_dataset['cell_proportion_names']
+}
+
+# Save Virchow combined dataset
+output_file_virchow = os.path.join(output_dir, "combined_features_Predictor_genes_Virchow.pt")
+torch.save(combined_dataset_virchow, output_file_virchow)
+print(f"\nSaved Virchow combined dataset to: {output_file_virchow}")
+
+# Extract Virchow data from combined dataset
+features_virchow = combined_dataset_virchow['features']
+individual_ids_virchow = combined_dataset_virchow['individual_ids']
+tile_ids_virchow = combined_dataset_virchow['tile_ids'] 
+expression_300genes_virchow = combined_dataset_virchow['expression_300genes']
+expression_300genes_names_virchow = combined_dataset_virchow['expression_300genes_names']
+cell_proportions_virchow = combined_dataset_virchow['cell_proportions']
+cell_proportion_names_virchow = combined_dataset_virchow['cell_proportion_names']
+
+# Exclude specific individuals
+excluded_individual = ["SU-15-27301-B1", "SU-16-02468-B1"] 
+valid_indices_virchow = [i for i, ind_id in enumerate(individual_ids_virchow) if ind_id not in excluded_individual]
+
+# Filter all data to exclude these individuals
+features_virchow = features_virchow[valid_indices_virchow]
+individual_ids_virchow = [individual_ids_virchow[i] for i in valid_indices_virchow]
+tile_ids_virchow = [tile_ids_virchow[i] for i in valid_indices_virchow]
+expression_300genes_virchow = expression_300genes_virchow[valid_indices_virchow]
+cell_proportions_virchow = cell_proportions_virchow[valid_indices_virchow]
+
+print(f"Virchow data after excluding individuals:")
+print(f"  Features shape: {features_virchow.shape}")
+print(f"  Number of tiles: {len(tile_ids_virchow)}")
+print(f"  Number of individuals: {len(set(individual_ids_virchow))}")
+
+# Get unique individuals for cross-validation
+unique_individuals_virchow = sorted(list(set(individual_ids_virchow)))
+print(f"Unique individuals: {len(unique_individuals_virchow)}")
+
+# Initialize results for Virchow (1x180 table for regular and partial correlations)
+virchow_results_regular = []
+virchow_results_partial = []
+
+# XGBoost parameters (same as Virchow2)
+xgb_params = {
+    'objective': 'reg:squarederror',
+    'eval_metric': 'rmse',
+    'tree_method': 'hist',
+    'n_jobs': -1,
+    'eta': 0.01,
+    'gamma': 0,
+    'min_child_weight': 5,
+    'colsample_bytree': 0.05,
+    'subsample': 0.5,
+    'alpha': 0.1,
+    'lambda': 0.01,
+    'max_depth': 12,
+    'seed': 42
+}
+num_boost_round = 800
+
+print(f"\nStarting simplified CV for Virchow with {len(expression_300genes_names_virchow)} genes...")
+
+# Simplified CV loop for each gene
+for gene_idx, gene_name in enumerate(expression_300genes_names_virchow):
+    print(f"\nProcessing gene {gene_idx + 1}/{len(expression_300genes_names_virchow)}: {gene_name}")
+    
+    # Find the median correlation sample for this gene from Virchow2 results
+    if gene_name in median_samples_regular:
+        target_individual = median_samples_regular[gene_name]
+        print(f"  Using median correlation sample: {target_individual}")
+    else:
+        print(f"  No median sample found for {gene_name}, skipping...")
+        virchow_results_regular.append(0.0)
+        virchow_results_partial.append(0.0)
+        continue
+    
+    # Check if target individual exists in Virchow data
+    if target_individual not in individual_ids_virchow:
+        print(f"  Target individual {target_individual} not found in Virchow data, skipping...")
+        virchow_results_regular.append(0.0)
+        virchow_results_partial.append(0.0)
+        continue
+    
+    # Split data: leave out target individual
+    train_indices = [i for i, ind_id in enumerate(individual_ids_virchow) if ind_id != target_individual]
+    test_indices = [i for i, ind_id in enumerate(individual_ids_virchow) if ind_id == target_individual]
+    
+    if len(test_indices) == 0:
+        print(f"  No test samples for {target_individual}, skipping...")
+        virchow_results_regular.append(0.0)
+        virchow_results_partial.append(0.0)
+        continue
+        
+    # Get train/test data
+    X_train = features_virchow[train_indices]
+    y_train = expression_300genes_virchow[train_indices, gene_idx]
+    X_test = features_virchow[test_indices]
+    y_test = expression_300genes_virchow[test_indices, gene_idx]
+    
+    # Create DMatrix for XGBoost
+    dtrain = xgb.DMatrix(X_train.numpy(), label=y_train.numpy())
+    dtest = xgb.DMatrix(X_test.numpy(), label=y_test.numpy())
+    
+    # Train model using same parameters as Virchow2
+    model = xgb.train(
+        xgb_params,
+        dtrain,
+        num_boost_round=num_boost_round,
+        verbose_eval=False
+    )
+    
+    # Make predictions
+    y_pred = model.predict(dtest)
+    
+    # Calculate regular correlation
+    if len(y_test) > 1:
+        regular_correlation, _ = pearsonr(y_test.numpy(), y_pred)
+        regular_correlation = regular_correlation if not np.isnan(regular_correlation) else 0.0
+        
+        # Calculate partial correlation controlling for cell proportions
+        test_cell_props = cell_proportions_virchow[test_indices]
+        if len(test_cell_props) == len(y_pred):
+            partial_correlation = partial_correlation_clr_virchow(y_test.numpy(), y_pred, test_cell_props)
+        else:
+            partial_correlation = 0.0
+    else:
+        regular_correlation = 0.0
+        partial_correlation = 0.0
+    
+    virchow_results_regular.append(regular_correlation)
+    virchow_results_partial.append(partial_correlation)
+    print(f"  Regular Correlation: {regular_correlation:.4f}, Partial Correlation: {partial_correlation:.4f}")
+
+# Save Virchow results as 1x300 tables (regular and partial correlations)
+virchow_results_regular_df = pd.DataFrame([virchow_results_regular], columns=expression_300genes_names_virchow, index=['Virchow'])
+virchow_results_partial_df = pd.DataFrame([virchow_results_partial], columns=expression_300genes_names_virchow, index=['Virchow'])
+
+virchow_regular_output_path = os.path.join(output_dir, "180genes_Virchow_regular_correlations.csv")
+virchow_partial_output_path = os.path.join(output_dir, "180genes_Virchow_partial_correlations_clr.csv")
+
+virchow_results_regular_df.to_csv(virchow_regular_output_path)
+virchow_results_partial_df.to_csv(virchow_partial_output_path)
+
+print(f"\nSaved Virchow regular correlations to: {virchow_regular_output_path}")
+print(f"Saved Virchow partial correlations to: {virchow_partial_output_path}")
+
+
+
+
+### ProvGigPath Feature Processing and Simplified CV for 180 Predictor Genes
+
+print("\n" + "="*80)
+print("PROVGIGPATH FEATURE PROCESSING AND SIMPLIFIED CV FOR 180 PREDICTOR GENES")
+print("="*80)
+
+# CLR transformation function for proportions (needed for partial correlation)
+def clr_transform_provgigpath(proportions):
+    """
+    Apply centered log-ratio (CLR) transformation to proportions
+    CLR(x) = log(x_i / geometric_mean(x))
+    """
+    # Add small epsilon to avoid log(0)
+    epsilon = 1e-6
+    proportions_adj = proportions + epsilon
+    
+    # Calculate geometric mean
+    geometric_mean = np.exp(np.mean(np.log(proportions_adj), axis=1, keepdims=True))
+    
+    # Apply CLR transformation
+    clr_props = np.log(proportions_adj / geometric_mean)
+    
+    return clr_props
+
+# Function to calculate partial correlation controlling for CLR-transformed cell proportions
+def partial_correlation_clr_provgigpath(x, y, cell_props):
+    """
+    Calculate partial correlation between x and y, controlling for CLR-transformed cell proportions
+    """
+    # Apply CLR transformation to cell proportions
+    clr_props = clr_transform_provgigpath(cell_props.numpy() if torch.is_tensor(cell_props) else cell_props)
+    
+    # Regress x on CLR-transformed proportions, get residuals
+    reg_x = LinearRegression().fit(clr_props, x)
+    residual_x = x - reg_x.predict(clr_props)
+    
+    # Regress y on CLR-transformed proportions, get residuals  
+    reg_y = LinearRegression().fit(clr_props, y)
+    residual_y = y - reg_y.predict(clr_props)
+    
+    # Correlation between residuals = partial correlation
+    if len(residual_x) > 1:
+        partial_corr, p_value = pearsonr(residual_x, residual_y)
+        return partial_corr if not np.isnan(partial_corr) else 0.0
+    else:
+        return 0.0
+
+# Load ProvGigPath features
+features_dir = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features"
+feature_files_provgigpath = [
+    "Cancer Cells_training_precomputed_features_ProvGigapath.pt",
+    "Normal Epithelial Cells_training_precomputed_features_ProvGigapath.pt", 
+    "Other Immune Cells_training_precomputed_features_ProvGigapath.pt",
+    "Stromal Cells_training_precomputed_features_ProvGigapath.pt",
+    "T Cells_training_precomputed_features_ProvGigapath.pt"
+]
+
+print(f"Loading ProvGigPath features from {len(feature_files_provgigpath)} files...")
+
+# Load all ProvGigPath feature files and collect unique tiles
+all_tile_ids_provgigpath = set()
+all_data_provgigpath = {}
+for i, file_name in enumerate(feature_files_provgigpath):
+    file_path = os.path.join(features_dir, file_name)
+    data = torch.load(file_path, weights_only=False)
+    
+    # Extract information
+    features = data['embeddings']  # [n_tiles, n_features]
+    individual_ids = data['individual_ids']
+    tile_ids = data['tile_ids']
+    
+    # Store data for each unique tile
+    for j, tile_id in enumerate(tile_ids):
+        if tile_id not in all_data_provgigpath:
+            all_data_provgigpath[tile_id] = {
+                'features': features[j],
+                'individual_id': individual_ids[j],
+            }
+            all_tile_ids_provgigpath.add(tile_id)
+
+# Convert back to arrays
+unique_tile_ids_provgigpath = sorted(list(all_tile_ids_provgigpath))
+combined_features_provgigpath = []
+combined_individual_ids_provgigpath = []
+
+for tile_id in unique_tile_ids_provgigpath:
+    tile_data = all_data_provgigpath[tile_id]
+    combined_features_provgigpath.append(tile_data['features'])
+    combined_individual_ids_provgigpath.append(tile_data['individual_id'])
+    
+combined_features_provgigpath = torch.stack(combined_features_provgigpath)
+
+# Extract common data by matching with Virchow2's tiles
+final_features_provgigpath = []
+final_individual_ids_provgigpath = []
+final_tile_ids_provgigpath = []
+
+# Create mapping for ProvGigPath tiles
+provgigpath_tile_to_idx = {tile_id: i for i, tile_id in enumerate(unique_tile_ids_provgigpath)}
+
+# Use Virchow2's tile order and find matching ProvGigPath features
+for i, virchow2_tile_id in enumerate(virchow2_combined_dataset['tile_ids']):
+    if virchow2_tile_id in provgigpath_tile_to_idx:
+        provgigpath_idx = provgigpath_tile_to_idx[virchow2_tile_id]
+        final_features_provgigpath.append(combined_features_provgigpath[provgigpath_idx])
+        final_individual_ids_provgigpath.append(combined_individual_ids_provgigpath[provgigpath_idx])
+        final_tile_ids_provgigpath.append(virchow2_tile_id)
+
+final_features_provgigpath = torch.stack(final_features_provgigpath)
+
+# Create combined dataset for ProvGigPath (using Virchow2's expression data)
+combined_dataset_provgigpath = {
+    'tile_ids': final_tile_ids_provgigpath,
+    'individual_ids': final_individual_ids_provgigpath,
+    'features': final_features_provgigpath,  # ProvGigPath features
+    'expression_300genes': virchow2_combined_dataset['expression_300genes'][:len(final_tile_ids_provgigpath)],
+    'expression_300genes_names': virchow2_combined_dataset['expression_300genes_names'],
+    'cell_proportions': virchow2_combined_dataset['cell_proportions'][:len(final_tile_ids_provgigpath)],
+    'cell_proportion_names': virchow2_combined_dataset['cell_proportion_names']
+}
+
+# Save ProvGigPath combined dataset
+output_file_provgigpath = os.path.join(output_dir, "combined_features_Predictor_genes_ProvGigPath.pt")
+torch.save(combined_dataset_provgigpath, output_file_provgigpath)
+print(f"\nSaved ProvGigPath combined dataset to: {output_file_provgigpath}")
+
+# Extract ProvGigPath data from combined dataset
+features_provgigpath = combined_dataset_provgigpath['features']
+individual_ids_provgigpath = combined_dataset_provgigpath['individual_ids']
+tile_ids_provgigpath = combined_dataset_provgigpath['tile_ids'] 
+expression_300genes_provgigpath = combined_dataset_provgigpath['expression_300genes']
+expression_300genes_names_provgigpath = combined_dataset_provgigpath['expression_300genes_names']
+cell_proportions_provgigpath = combined_dataset_provgigpath['cell_proportions']
+cell_proportion_names_provgigpath = combined_dataset_provgigpath['cell_proportion_names']
+
+# Exclude specific individuals
+excluded_individual = ["SU-15-27301-B1", "SU-16-02468-B1"] 
+valid_indices_provgigpath = [i for i, ind_id in enumerate(individual_ids_provgigpath) if ind_id not in excluded_individual]
+
+# Filter all data to exclude these individuals
+features_provgigpath = features_provgigpath[valid_indices_provgigpath]
+individual_ids_provgigpath = [individual_ids_provgigpath[i] for i in valid_indices_provgigpath]
+tile_ids_provgigpath = [tile_ids_provgigpath[i] for i in valid_indices_provgigpath]
+expression_300genes_provgigpath = expression_300genes_provgigpath[valid_indices_provgigpath]
+cell_proportions_provgigpath = cell_proportions_provgigpath[valid_indices_provgigpath]
+
+print(f"ProvGigPath data after excluding individuals:")
+print(f"  Features shape: {features_provgigpath.shape}")
+print(f"  Number of tiles: {len(tile_ids_provgigpath)}")
+print(f"  Number of individuals: {len(set(individual_ids_provgigpath))}")
+
+# Get unique individuals for cross-validation
+unique_individuals_provgigpath = sorted(list(set(individual_ids_provgigpath)))
+print(f"Unique individuals: {len(unique_individuals_provgigpath)}")
+
+# Initialize results for ProvGigPath (1x180 table for regular and partial correlations)
+provgigpath_results_regular = []
+provgigpath_results_partial = []
+
+# XGBoost parameters (same as Virchow2)
+xgb_params = {
+    'objective': 'reg:squarederror',
+    'eval_metric': 'rmse',
+    'tree_method': 'hist',
+    'n_jobs': -1,
+    'eta': 0.01,
+    'gamma': 0,
+    'min_child_weight': 5,
+    'colsample_bytree': 0.05,
+    'subsample': 0.5,
+    'alpha': 0.1,
+    'lambda': 0.01,
+    'max_depth': 12,
+    'seed': 42
+}
+num_boost_round = 800
+
+print(f"\nStarting simplified CV for ProvGigPath with {len(expression_300genes_names_provgigpath)} genes...")
+
+# Simplified CV loop for each gene
+for gene_idx, gene_name in enumerate(expression_300genes_names_provgigpath):
+    print(f"\nProcessing gene {gene_idx + 1}/{len(expression_300genes_names_provgigpath)}: {gene_name}")
+    
+    # Find the median correlation sample for this gene from Virchow2 results
+    if gene_name in median_samples_regular:
+        target_individual = median_samples_regular[gene_name]
+        print(f"  Using median correlation sample: {target_individual}")
+    else:
+        print(f"  No median sample found for {gene_name}, skipping...")
+        provgigpath_results_regular.append(0.0)
+        provgigpath_results_partial.append(0.0)
+        continue
+    
+    # Check if target individual exists in ProvGigPath data
+    if target_individual not in individual_ids_provgigpath:
+        print(f"  Target individual {target_individual} not found in ProvGigPath data, skipping...")
+        provgigpath_results_regular.append(0.0)
+        provgigpath_results_partial.append(0.0)
+        continue
+    
+    # Split data: leave out target individual
+    train_indices = [i for i, ind_id in enumerate(individual_ids_provgigpath) if ind_id != target_individual]
+    test_indices = [i for i, ind_id in enumerate(individual_ids_provgigpath) if ind_id == target_individual]
+    
+    if len(test_indices) == 0:
+        print(f"  No test samples for {target_individual}, skipping...")
+        provgigpath_results_regular.append(0.0)
+        provgigpath_results_partial.append(0.0)
+        continue
+        
+    # Get train/test data
+    X_train = features_provgigpath[train_indices]
+    y_train = expression_300genes_provgigpath[train_indices, gene_idx]
+    X_test = features_provgigpath[test_indices]
+    y_test = expression_300genes_provgigpath[test_indices, gene_idx]
+    
+    # Create DMatrix for XGBoost
+    dtrain = xgb.DMatrix(X_train.numpy(), label=y_train.numpy())
+    dtest = xgb.DMatrix(X_test.numpy(), label=y_test.numpy())
+    
+    # Train model using same parameters as Virchow2
+    model = xgb.train(
+        xgb_params,
+        dtrain,
+        num_boost_round=num_boost_round,
+        verbose_eval=False
+    )
+    
+    # Make predictions
+    y_pred = model.predict(dtest)
+    
+    # Calculate regular correlation
+    if len(y_test) > 1:
+        regular_correlation, _ = pearsonr(y_test.numpy(), y_pred)
+        regular_correlation = regular_correlation if not np.isnan(regular_correlation) else 0.0
+        
+        # Calculate partial correlation controlling for cell proportions
+        test_cell_props = cell_proportions_provgigpath[test_indices]
+        if len(test_cell_props) == len(y_pred):
+            partial_correlation = partial_correlation_clr_provgigpath(y_test.numpy(), y_pred, test_cell_props)
+        else:
+            partial_correlation = 0.0
+    else:
+        regular_correlation = 0.0
+        partial_correlation = 0.0
+    
+    provgigpath_results_regular.append(regular_correlation)
+    provgigpath_results_partial.append(partial_correlation)
+    print(f"  Regular Correlation: {regular_correlation:.4f}, Partial Correlation: {partial_correlation:.4f}")
+
+# Save ProvGigPath results as 1x300 tables (regular and partial correlations)
+provgigpath_results_regular_df = pd.DataFrame([provgigpath_results_regular], columns=expression_300genes_names_provgigpath, index=['ProvGigPath'])
+provgigpath_results_partial_df = pd.DataFrame([provgigpath_results_partial], columns=expression_300genes_names_provgigpath, index=['ProvGigPath'])
+
+provgigpath_regular_output_path = os.path.join(output_dir, "180genes_ProvGigPath_regular_correlations.csv")
+provgigpath_partial_output_path = os.path.join(output_dir, "180genes_ProvGigPath_partial_correlations_clr.csv")
+
+provgigpath_results_regular_df.to_csv(provgigpath_regular_output_path)
+provgigpath_results_partial_df.to_csv(provgigpath_partial_output_path)
+
+print(f"\nSaved ProvGigPath regular correlations to: {provgigpath_regular_output_path}")
+print(f"Saved ProvGigPath partial correlations to: {provgigpath_partial_output_path}")
+
+
+
+
+### CONCH Feature Processing and Simplified CV for 180 Predictor Genes
+
+print("\n" + "="*80)
+print("CONCH FEATURE PROCESSING AND SIMPLIFIED CV FOR 180 PREDICTOR GENES")
+print("="*80)
+
+# CLR transformation function for proportions (needed for partial correlation)
+def clr_transform_conch(proportions):
+    """
+    Apply centered log-ratio (CLR) transformation to proportions
+    CLR(x) = log(x_i / geometric_mean(x))
+    """
+    # Add small epsilon to avoid log(0)
+    epsilon = 1e-6
+    proportions_adj = proportions + epsilon
+    
+    # Calculate geometric mean
+    geometric_mean = np.exp(np.mean(np.log(proportions_adj), axis=1, keepdims=True))
+    
+    # Apply CLR transformation
+    clr_props = np.log(proportions_adj / geometric_mean)
+    
+    return clr_props
+
+# Function to calculate partial correlation controlling for CLR-transformed cell proportions
+def partial_correlation_clr_conch(x, y, cell_props):
+    """
+    Calculate partial correlation between x and y, controlling for CLR-transformed cell proportions
+    """
+    # Apply CLR transformation to cell proportions
+    clr_props = clr_transform_conch(cell_props.numpy() if torch.is_tensor(cell_props) else cell_props)
+    
+    # Regress x on CLR-transformed proportions, get residuals
+    reg_x = LinearRegression().fit(clr_props, x)
+    residual_x = x - reg_x.predict(clr_props)
+    
+    # Regress y on CLR-transformed proportions, get residuals  
+    reg_y = LinearRegression().fit(clr_props, y)
+    residual_y = y - reg_y.predict(clr_props)
+    
+    # Correlation between residuals = partial correlation
+    if len(residual_x) > 1:
+        partial_corr, p_value = pearsonr(residual_x, residual_y)
+        return partial_corr if not np.isnan(partial_corr) else 0.0
+    else:
+        return 0.0
+
+# Load CONCH features
+features_dir = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features"
+feature_files_conch = [
+    "Cancer Cells_training_precomputed_features_Conch.pt",
+    "Normal Epithelial Cells_training_precomputed_features_Conch.pt", 
+    "Other Immune Cells_training_precomputed_features_Conch.pt",
+    "Stromal Cells_training_precomputed_features_Conch.pt",
+    "T Cells_training_precomputed_features_Conch.pt"
+]
+
+print(f"Loading CONCH features from {len(feature_files_conch)} files...")
+
+# Load all CONCH feature files and collect unique tiles
+all_tile_ids_conch = set()
+all_data_conch = {}
+for i, file_name in enumerate(feature_files_conch):
+    file_path = os.path.join(features_dir, file_name)
+    data = torch.load(file_path, weights_only=False)
+    
+    # Extract information
+    features = data['embeddings']  # [n_tiles, n_features]
+    individual_ids = data['individual_ids']
+    tile_ids = data['tile_ids']
+    
+    # Store data for each unique tile
+    for j, tile_id in enumerate(tile_ids):
+        if tile_id not in all_data_conch:
+            all_data_conch[tile_id] = {
+                'features': features[j],
+                'individual_id': individual_ids[j],
+            }
+            all_tile_ids_conch.add(tile_id)
+
+# Convert back to arrays
+unique_tile_ids_conch = sorted(list(all_tile_ids_conch))
+combined_features_conch = []
+combined_individual_ids_conch = []
+
+for tile_id in unique_tile_ids_conch:
+    tile_data = all_data_conch[tile_id]
+    combined_features_conch.append(tile_data['features'])
+    combined_individual_ids_conch.append(tile_data['individual_id'])
+    
+combined_features_conch = torch.stack(combined_features_conch)
+
+# Extract common data by matching with Virchow2's tiles
+final_features_conch = []
+final_individual_ids_conch = []
+final_tile_ids_conch = []
+
+# Create mapping for CONCH tiles
+conch_tile_to_idx = {tile_id: i for i, tile_id in enumerate(unique_tile_ids_conch)}
+
+# Use Virchow2's tile order and find matching CONCH features
+for i, virchow2_tile_id in enumerate(virchow2_combined_dataset['tile_ids']):
+    if virchow2_tile_id in conch_tile_to_idx:
+        conch_idx = conch_tile_to_idx[virchow2_tile_id]
+        final_features_conch.append(combined_features_conch[conch_idx])
+        final_individual_ids_conch.append(combined_individual_ids_conch[conch_idx])
+        final_tile_ids_conch.append(virchow2_tile_id)
+
+final_features_conch = torch.stack(final_features_conch)
+
+# Create combined dataset for CONCH (using Virchow2's expression data)
+combined_dataset_conch = {
+    'tile_ids': final_tile_ids_conch,
+    'individual_ids': final_individual_ids_conch,
+    'features': final_features_conch,  # CONCH features
+    'expression_300genes': virchow2_combined_dataset['expression_300genes'][:len(final_tile_ids_conch)],
+    'expression_300genes_names': virchow2_combined_dataset['expression_300genes_names'],
+    'cell_proportions': virchow2_combined_dataset['cell_proportions'][:len(final_tile_ids_conch)],
+    'cell_proportion_names': virchow2_combined_dataset['cell_proportion_names']
+}
+
+# Save CONCH combined dataset
+output_file_conch = os.path.join(output_dir, "combined_features_Predictor_genes_CONCH.pt")
+torch.save(combined_dataset_conch, output_file_conch)
+print(f"\nSaved CONCH combined dataset to: {output_file_conch}")
+
+# Extract CONCH data from combined dataset
+features_conch = combined_dataset_conch['features']
+individual_ids_conch = combined_dataset_conch['individual_ids']
+tile_ids_conch = combined_dataset_conch['tile_ids'] 
+expression_300genes_conch = combined_dataset_conch['expression_300genes']
+expression_300genes_names_conch = combined_dataset_conch['expression_300genes_names']
+cell_proportions_conch = combined_dataset_conch['cell_proportions']
+cell_proportion_names_conch = combined_dataset_conch['cell_proportion_names']
+
+# Exclude specific individuals
+excluded_individual = ["SU-15-27301-B1", "SU-16-02468-B1"] 
+valid_indices_conch = [i for i, ind_id in enumerate(individual_ids_conch) if ind_id not in excluded_individual]
+
+# Filter all data to exclude these individuals
+features_conch = features_conch[valid_indices_conch]
+individual_ids_conch = [individual_ids_conch[i] for i in valid_indices_conch]
+tile_ids_conch = [tile_ids_conch[i] for i in valid_indices_conch]
+expression_300genes_conch = expression_300genes_conch[valid_indices_conch]
+cell_proportions_conch = cell_proportions_conch[valid_indices_conch]
+
+print(f"CONCH data after excluding individuals:")
+print(f"  Features shape: {features_conch.shape}")
+print(f"  Number of tiles: {len(tile_ids_conch)}")
+print(f"  Number of individuals: {len(set(individual_ids_conch))}")
+
+# Get unique individuals for cross-validation
+unique_individuals_conch = sorted(list(set(individual_ids_conch)))
+print(f"Unique individuals: {len(unique_individuals_conch)}")
+
+# Initialize results for CONCH (1x180 table for regular and partial correlations)
+conch_results_regular = []
+conch_results_partial = []
+
+# XGBoost parameters (same as Virchow2)
+xgb_params = {
+    'objective': 'reg:squarederror',
+    'eval_metric': 'rmse',
+    'tree_method': 'hist',
+    'n_jobs': -1,
+    'eta': 0.01,
+    'gamma': 0,
+    'min_child_weight': 5,
+    'colsample_bytree': 0.05,
+    'subsample': 0.5,
+    'alpha': 0.1,
+    'lambda': 0.01,
+    'max_depth': 12,
+    'seed': 42
+}
+num_boost_round = 800
+
+print(f"\nStarting simplified CV for CONCH with {len(expression_300genes_names_conch)} genes...")
+
+# Simplified CV loop for each gene
+for gene_idx, gene_name in enumerate(expression_300genes_names_conch):
+    print(f"\nProcessing gene {gene_idx + 1}/{len(expression_300genes_names_conch)}: {gene_name}")
+    
+    # Find the median correlation sample for this gene from Virchow2 results
+    if gene_name in median_samples_regular:
+        target_individual = median_samples_regular[gene_name]
+        print(f"  Using median correlation sample: {target_individual}")
+    else:
+        print(f"  No median sample found for {gene_name}, skipping...")
+        conch_results_regular.append(0.0)
+        conch_results_partial.append(0.0)
+        continue
+    
+    # Check if target individual exists in CONCH data
+    if target_individual not in individual_ids_conch:
+        print(f"  Target individual {target_individual} not found in CONCH data, skipping...")
+        conch_results_regular.append(0.0)
+        conch_results_partial.append(0.0)
+        continue
+    
+    # Split data: leave out target individual
+    train_indices = [i for i, ind_id in enumerate(individual_ids_conch) if ind_id != target_individual]
+    test_indices = [i for i, ind_id in enumerate(individual_ids_conch) if ind_id == target_individual]
+    
+    if len(test_indices) == 0:
+        print(f"  No test samples for {target_individual}, skipping...")
+        conch_results_regular.append(0.0)
+        conch_results_partial.append(0.0)
+        continue
+        
+    # Get train/test data
+    X_train = features_conch[train_indices]
+    y_train = expression_300genes_conch[train_indices, gene_idx]
+    X_test = features_conch[test_indices]
+    y_test = expression_300genes_conch[test_indices, gene_idx]
+    
+    # Create DMatrix for XGBoost
+    dtrain = xgb.DMatrix(X_train.numpy(), label=y_train.numpy())
+    dtest = xgb.DMatrix(X_test.numpy(), label=y_test.numpy())
+    
+    # Train model using same parameters as Virchow2
+    model = xgb.train(
+        xgb_params,
+        dtrain,
+        num_boost_round=num_boost_round,
+        verbose_eval=False
+    )
+    
+    # Make predictions
+    y_pred = model.predict(dtest)
+    
+    # Calculate regular correlation
+    if len(y_test) > 1:
+        regular_correlation, _ = pearsonr(y_test.numpy(), y_pred)
+        regular_correlation = regular_correlation if not np.isnan(regular_correlation) else 0.0
+        
+        # Calculate partial correlation controlling for cell proportions
+        test_cell_props = cell_proportions_conch[test_indices]
+        if len(test_cell_props) == len(y_pred):
+            partial_correlation = partial_correlation_clr_conch(y_test.numpy(), y_pred, test_cell_props)
+        else:
+            partial_correlation = 0.0
+    else:
+        regular_correlation = 0.0
+        partial_correlation = 0.0
+    
+    conch_results_regular.append(regular_correlation)
+    conch_results_partial.append(partial_correlation)
+    print(f"  Regular Correlation: {regular_correlation:.4f}, Partial Correlation: {partial_correlation:.4f}")
+
+# Save CONCH results as 1x300 tables (regular and partial correlations)
+conch_results_regular_df = pd.DataFrame([conch_results_regular], columns=expression_300genes_names_conch, index=['CONCH'])
+conch_results_partial_df = pd.DataFrame([conch_results_partial], columns=expression_300genes_names_conch, index=['CONCH'])
+
+conch_regular_output_path = os.path.join(output_dir, "180genes_CONCH_regular_correlations.csv")
+conch_partial_output_path = os.path.join(output_dir, "180genes_CONCH_partial_correlations_clr.csv")
+
+conch_results_regular_df.to_csv(conch_regular_output_path)
+conch_results_partial_df.to_csv(conch_partial_output_path)
+
+print(f"\nSaved CONCH regular correlations to: {conch_regular_output_path}")
+print(f"Saved CONCH partial correlations to: {conch_partial_output_path}")
+
+
+
+
+### STEP 4: Create correlation scatter plot for 180 genes
+
+import seaborn as sns
+
+print("\n" + "="*80)
+print("STEP 4: Creating correlation scatter plot for 180 genes")
+print("="*80)
+
+# Load correlation data
+regular_corr_df = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_regular_correlations.csv", index_col=0)
+partial_corr_df = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_partial_correlations_clr.csv", index_col=0)
+
+print(f"Regular correlations shape: {regular_corr_df.shape}")
+print(f"Partial correlations shape: {partial_corr_df.shape}")
+
+# Get all genes (columns, not rows)
+genes_180 = regular_corr_df.columns.tolist()
+print(f"Using all genes: {len(genes_180)}")
+
+# Use all genes
+regular_corr_180 = regular_corr_df
+partial_corr_180 = partial_corr_df
+
+# Calculate median and IQR for each gene (across 23 samples)
+regular_median = regular_corr_180.median(axis=0)  # axis=0 for columns (genes)
+regular_iqr = regular_corr_180.quantile(0.75, axis=0) - regular_corr_180.quantile(0.25, axis=0)
+partial_median = partial_corr_180.median(axis=0)  # axis=0 for columns (genes)
+partial_iqr = partial_corr_180.quantile(0.75, axis=0) - partial_corr_180.quantile(0.25, axis=0)
+
+# Create gene groups based on the order from FigureS10
+# Based on the script: Cancer_Cells (0-29), Normal_Epithelial (30-59), T (60-89), 
+# Other_Immune (90-119), Stromal (120-149), Highly_Variable (150-179)
+gene_groups = []
+gene_colors = []
+
+# Define colors for each cell type (matching Figure4 color scheme)
+color_mapping = {
+    'Tumor Markers': '#E41A1C',      # Red (from Figure4)
+    'Normal Epithelial Markers': '#377EB8', # Blue (from Figure4)
+    'T Markers': '#4DAF4A',           # Green (from Figure4)
+    'pan-APC Markers': '#FF7F00',      # Orange (from Figure4)
+    'Stromal Markers': '#FFFF33',           # Yellow (from Figure4)
+    'Highly Variable Genes': '#666666'    # Dark gray
+}
+
+for i, gene in enumerate(genes_180):
+    if i < 30:
+        gene_groups.append('Tumor Markers')
+        gene_colors.append(color_mapping['Tumor Markers'])
+    elif i < 60:
+        gene_groups.append('Normal Epithelial Markers')
+        gene_colors.append(color_mapping['Normal Epithelial Markers'])
+    elif i < 90:
+        gene_groups.append('T Markers')
+        gene_colors.append(color_mapping['T Markers'])
+    elif i < 120:
+        gene_groups.append('pan-APC Markers')
+        gene_colors.append(color_mapping['pan-APC Markers'])
+    elif i < 150:
+        gene_groups.append('Stromal Markers')
+        gene_colors.append(color_mapping['Stromal Markers'])
+    else:  # 150-179
+        gene_groups.append('Highly Variable Genes')
+        gene_colors.append(color_mapping['Highly Variable Genes'])
+
+# Create DataFrame for plotting
+plot_df = pd.DataFrame({
+    'Gene': genes_180,
+    'Regular_Correlation_Median': regular_median,
+    'Partial_Correlation_Median': partial_median,
+    'Regular_IQR': regular_iqr,
+    'Partial_IQR': partial_iqr,
+    'Gene_Group': gene_groups,
+    'Color': gene_colors
+})
+
+# Set fixed point size for all genes (larger size)
+plot_df['Point_Size'] = 150  # Larger fixed size for all points
+
+print(f"Using fixed point size: {plot_df['Point_Size'].iloc[0]}")
+print(f"Gene group distribution:")
+print(plot_df['Gene_Group'].value_counts())
+
+# Create the scatter plot
+plt.figure(figsize=(12, 10))
+
+# Plot each group separately for legend
+for group in ['Tumor Markers', 'Normal Epithelial Markers', 'T Markers', 'pan-APC Markers', 'Stromal Markers', 'Highly Variable Genes']:
+    group_data = plot_df[plot_df['Gene_Group'] == group]
+    if len(group_data) > 0:
+        # Special case for Highly Variable Genes - show n=30 instead of actual count
+        if group == 'Highly Variable Genes':
+            label_text = f'{group} (n=30)'
+        else:
+            label_text = f'{group} (n={len(group_data)})'
+            
+        plt.scatter(
+            group_data['Regular_Correlation_Median'],
+            group_data['Partial_Correlation_Median'],
+            s=group_data['Point_Size'],
+            c=color_mapping[group],
+            alpha=0.7,
+            label=label_text,
+            edgecolors='black',
+            linewidth=0.5
+        )
+
+# Set labels and title with large fonts (increased by 2 sizes)
+plt.xlabel('Regular Pearson Correlation', fontsize=24, fontweight='bold')
+plt.ylabel('Partial Pearson Correlation', fontsize=24, fontweight='bold')
+plt.title('Gene Expression Prediction (Virchow2)', fontsize=26, fontweight='bold')
+
+# Styling with larger fonts and thicker borders
+plt.tick_params(axis='both', which='major', labelsize=20, width=2, length=6)
+for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
+    label.set_fontweight('bold')
+
+# Add thick black border around the plot
+for spine in plt.gca().spines.values():
+    spine.set_linewidth(3)
+    spine.set_edgecolor('black')
+
+# Legend with larger font (without reference line) - increased by 2 sizes
+legend = plt.legend(loc='upper left', fontsize=16, frameon=True, fancybox=True, shadow=True)
+# Make legend text bold
+for text in legend.get_texts():
+    text.set_fontweight('bold')
+
+# Set axis limits
+plt.xlim(-0.1, 0.6)
+plt.ylim(-0.1, 0.6)
+
+# Add diagonal reference line (after legend to avoid including it)
+plt.plot([-0.1, 0.6], [-0.1, 0.6], 'k--', alpha=0.5, linewidth=2)
+
+# Annotate genes with regular correlation > 0.48
+high_corr_genes = plot_df[plot_df['Regular_Correlation_Median'] > 0.48]
+print(f"\nGenes with regular correlation > 0.48: {len(high_corr_genes)}")
+
+for i, (idx, row) in enumerate(high_corr_genes.iterrows()):
+    gene_name = row['Gene']
+    x_pos = row['Regular_Correlation_Median']
+    y_pos = row['Partial_Correlation_Median']
+    
+    # Special positioning for EPCAM gene - move it slightly to the right
+    if gene_name == 'EPCAM':
+        x_offset = 15  # Move right
+        y_offset = -8  # Keep same vertical position
+    else:
+        x_offset = 0   # Default horizontal position
+        y_offset = -8  # Default vertical position
+    
+    # Annotation moved down to avoid overlapping with points
+    plt.annotate(gene_name, (x_pos, y_pos), 
+                xytext=(x_offset, y_offset), textcoords='offset points',
+                fontsize=12, fontweight='bold', 
+                color='black',
+                ha='center', va='top')
+    
+    print(f"  {gene_name}: Regular={x_pos:.3f}, Partial={y_pos:.3f}, Group={row['Gene_Group']}")
+
+# Grid
+plt.grid(True, alpha=0.3, linewidth=1)
+
+# Tight layout
+plt.tight_layout()
+
+# Save plot
+output_path = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/180_Genes_Correlation_Scatter_Plot_Virchow2.png"
+plt.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
+
+
+
+
+### UNI2h Scatter Plot
+
+print("\n" + "="*80)
+print("Creating UNI2h scatter plot")
+print("="*80)
+
+# Load UNI2h correlation data (1 row CSV)
+uni2h_regular_df = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_UNI2h_regular_correlations.csv", index_col=0)
+uni2h_partial_df = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_UNI2h_partial_correlations_clr.csv", index_col=0)
+
+print(f"UNI2h Regular correlations shape: {uni2h_regular_df.shape}")
+print(f"UNI2h Partial correlations shape: {uni2h_partial_df.shape}")
+
+# Get correlation values (single row, so use .iloc[0])
+uni2h_genes = uni2h_regular_df.columns.tolist()
+uni2h_regular_corr = uni2h_regular_df.iloc[0]  # First (and only) row
+uni2h_partial_corr = uni2h_partial_df.iloc[0]  # First (and only) row
+
+print(f"Using {len(uni2h_genes)} genes for UNI2h")
+
+# Create gene groups (same logic as Virchow2)
+uni2h_gene_groups = []
+uni2h_gene_colors = []
+
+for i, gene in enumerate(uni2h_genes):
+    if i < 30:
+        uni2h_gene_groups.append('Tumor Markers')
+        uni2h_gene_colors.append(color_mapping['Tumor Markers'])
+    elif i < 60:
+        uni2h_gene_groups.append('Normal Epithelial Markers')
+        uni2h_gene_colors.append(color_mapping['Normal Epithelial Markers'])
+    elif i < 90:
+        uni2h_gene_groups.append('T Markers')
+        uni2h_gene_colors.append(color_mapping['T Markers'])
+    elif i < 120:
+        uni2h_gene_groups.append('pan-APC Markers')
+        uni2h_gene_colors.append(color_mapping['pan-APC Markers'])
+    elif i < 150:
+        uni2h_gene_groups.append('Stromal Markers')
+        uni2h_gene_colors.append(color_mapping['Stromal Markers'])
+    else:  # 150-179
+        uni2h_gene_groups.append('Highly Variable Genes')
+        uni2h_gene_colors.append(color_mapping['Highly Variable Genes'])
+
+# Create DataFrame for UNI2h plotting
+uni2h_plot_df = pd.DataFrame({
+    'Gene': uni2h_genes,
+    'Regular_Correlation': uni2h_regular_corr,
+    'Partial_Correlation': uni2h_partial_corr,
+    'Gene_Group': uni2h_gene_groups,
+    'Color': uni2h_gene_colors
+})
+
+# Set fixed point size (larger)
+uni2h_plot_df['Point_Size'] = 150
+
+print(f"UNI2h Gene group distribution:")
+print(uni2h_plot_df['Gene_Group'].value_counts())
+
+# Create UNI2h scatter plot
+plt.figure(figsize=(12, 10))
+
+# Plot each group separately for legend
+for group in ['Tumor Markers', 'Normal Epithelial Markers', 'T Markers', 'pan-APC Markers', 'Stromal Markers', 'Highly Variable Genes']:
+    group_data = uni2h_plot_df[uni2h_plot_df['Gene_Group'] == group]
+    if len(group_data) > 0:
+        # Special case for Highly Variable Genes - show n=30 instead of actual count
+        if group == 'Highly Variable Genes':
+            label_text = f'{group} (n=30)'
+        else:
+            label_text = f'{group} (n={len(group_data)})'
+            
+        plt.scatter(
+            group_data['Regular_Correlation'],
+            group_data['Partial_Correlation'],
+            s=group_data['Point_Size'],
+            c=color_mapping[group],
+            alpha=0.7,
+            label=label_text,
+            edgecolors='black',
+            linewidth=0.5
+        )
+
+# Set labels and title (increased by 2 sizes)
+plt.xlabel('Regular Pearson Correlation', fontsize=24, fontweight='bold')
+plt.ylabel('Partial Pearson Correlation', fontsize=24, fontweight='bold')
+plt.title('Gene Expression Prediction (UNI2-h)', fontsize=26, fontweight='bold')
+
+# Styling with larger fonts and thicker borders
+plt.tick_params(axis='both', which='major', labelsize=20, width=2, length=6)
+for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
+    label.set_fontweight('bold')
+
+# Add thick black border around the plot
+for spine in plt.gca().spines.values():
+    spine.set_linewidth(3)
+    spine.set_edgecolor('black')
+
+# Legend with bold text (increased by 2 sizes)
+legend = plt.legend(loc='upper left', fontsize=16, frameon=True, fancybox=True, shadow=True)
+for text in legend.get_texts():
+    text.set_fontweight('bold')
+
+# Set axis limits
+plt.xlim(-0.1, 0.6)
+plt.ylim(-0.1, 0.6)
+
+# Add diagonal reference line
+plt.plot([-0.1, 0.6], [-0.1, 0.6], 'k--', alpha=0.5, linewidth=2)
+
+# Annotate specific genes
+target_genes = ['ID1', 'S100A6', 'CA2', 'TPM2', 'EPCAM', 'IGKC', 'CDX2']
+uni2h_target_genes = uni2h_plot_df[uni2h_plot_df['Gene'].isin(target_genes)]
+print(f"\nUNI2h target genes found: {len(uni2h_target_genes)}")
+
+for i, (idx, row) in enumerate(uni2h_target_genes.iterrows()):
+    gene_name = row['Gene']
+    x_pos = row['Regular_Correlation']
+    y_pos = row['Partial_Correlation']
+    
+    # Special positioning for EPCAM gene
+    if gene_name == 'EPCAM':
+        x_offset = 15
+        y_offset = -8
+    else:
+        x_offset = 0
+        y_offset = -8
+    
+    plt.annotate(gene_name, (x_pos, y_pos), 
+                xytext=(x_offset, y_offset), textcoords='offset points',
+                fontsize=12, fontweight='bold', 
+                color='black',
+                ha='center', va='top')
+    
+    print(f"  {gene_name}: Regular={x_pos:.3f}, Partial={y_pos:.3f}, Group={row['Gene_Group']}")
+
+# Grid and layout
+plt.grid(True, alpha=0.3, linewidth=1)
+plt.tight_layout()
+
+# Save UNI2h plot
+uni2h_output_path = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/180_Genes_Correlation_Scatter_Plot_UNI2h.png"
+plt.savefig(uni2h_output_path, dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
+
+
+
+
+### ResNet50 Scatter Plot
+
+print("\n" + "="*80)
+print("Creating ResNet50 scatter plot")
+print("="*80)
+
+# Load ResNet50 correlation data (1 row CSV)
+resnet50_regular_df = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_ResNet50_regular_correlations.csv", index_col=0)
+resnet50_partial_df = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_ResNet50_partial_correlations_clr.csv", index_col=0)
+
+print(f"ResNet50 Regular correlations shape: {resnet50_regular_df.shape}")
+print(f"ResNet50 Partial correlations shape: {resnet50_partial_df.shape}")
+
+# Get correlation values (single row, so use .iloc[0])
+resnet50_genes = resnet50_regular_df.columns.tolist()
+resnet50_regular_corr = resnet50_regular_df.iloc[0]  # First (and only) row
+resnet50_partial_corr = resnet50_partial_df.iloc[0]  # First (and only) row
+
+print(f"Using {len(resnet50_genes)} genes for ResNet50")
+
+# Create gene groups (same logic as Virchow2)
+resnet50_gene_groups = []
+resnet50_gene_colors = []
+
+for i, gene in enumerate(resnet50_genes):
+    if i < 30:
+        resnet50_gene_groups.append('Tumor Markers')
+        resnet50_gene_colors.append(color_mapping['Tumor Markers'])
+    elif i < 60:
+        resnet50_gene_groups.append('Normal Epithelial Markers')
+        resnet50_gene_colors.append(color_mapping['Normal Epithelial Markers'])
+    elif i < 90:
+        resnet50_gene_groups.append('T Markers')
+        resnet50_gene_colors.append(color_mapping['T Markers'])
+    elif i < 120:
+        resnet50_gene_groups.append('pan-APC Markers')
+        resnet50_gene_colors.append(color_mapping['pan-APC Markers'])
+    elif i < 150:
+        resnet50_gene_groups.append('Stromal Markers')
+        resnet50_gene_colors.append(color_mapping['Stromal Markers'])
+    else:  # 150-179
+        resnet50_gene_groups.append('Highly Variable Genes')
+        resnet50_gene_colors.append(color_mapping['Highly Variable Genes'])
+
+# Create DataFrame for ResNet50 plotting
+resnet50_plot_df = pd.DataFrame({
+    'Gene': resnet50_genes,
+    'Regular_Correlation': resnet50_regular_corr,
+    'Partial_Correlation': resnet50_partial_corr,
+    'Gene_Group': resnet50_gene_groups,
+    'Color': resnet50_gene_colors
+})
+
+# Set fixed point size (larger)
+resnet50_plot_df['Point_Size'] = 150
+
+print(f"ResNet50 Gene group distribution:")
+print(resnet50_plot_df['Gene_Group'].value_counts())
+
+# Create ResNet50 scatter plot
+plt.figure(figsize=(12, 10))
+
+# Plot each group separately for legend
+for group in ['Tumor Markers', 'Normal Epithelial Markers', 'T Markers', 'pan-APC Markers', 'Stromal Markers', 'Highly Variable Genes']:
+    group_data = resnet50_plot_df[resnet50_plot_df['Gene_Group'] == group]
+    if len(group_data) > 0:
+        # Special case for Highly Variable Genes - show n=30 instead of actual count
+        if group == 'Highly Variable Genes':
+            label_text = f'{group} (n=30)'
+        else:
+            label_text = f'{group} (n={len(group_data)})'
+            
+        plt.scatter(
+            group_data['Regular_Correlation'],
+            group_data['Partial_Correlation'],
+            s=group_data['Point_Size'],
+            c=color_mapping[group],
+            alpha=0.7,
+            label=label_text,
+            edgecolors='black',
+            linewidth=0.5
+        )
+
+# Set labels and title (increased by 2 sizes)
+plt.xlabel('Regular Pearson Correlation', fontsize=24, fontweight='bold')
+plt.ylabel('Partial Pearson Correlation', fontsize=24, fontweight='bold')
+plt.title('Gene Expression Prediction (ResNet50)', fontsize=26, fontweight='bold')
+
+# Styling with larger fonts and thicker borders
+plt.tick_params(axis='both', which='major', labelsize=20, width=2, length=6)
+for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
+    label.set_fontweight('bold')
+
+# Add thick black border around the plot
+for spine in plt.gca().spines.values():
+    spine.set_linewidth(3)
+    spine.set_edgecolor('black')
+
+# Legend with bold text (increased by 2 sizes)
+legend = plt.legend(loc='upper left', fontsize=16, frameon=True, fancybox=True, shadow=True)
+for text in legend.get_texts():
+    text.set_fontweight('bold')
+
+# Set axis limits
+plt.xlim(-0.1, 0.6)
+plt.ylim(-0.1, 0.6)
+
+# Add diagonal reference line
+plt.plot([-0.1, 0.6], [-0.1, 0.6], 'k--', alpha=0.5, linewidth=2)
+
+# Annotate specific genes
+target_genes = ['ID1', 'S100A6', 'CA2', 'TPM2', 'EPCAM', 'IGKC', 'CDX2']
+resnet50_target_genes = resnet50_plot_df[resnet50_plot_df['Gene'].isin(target_genes)]
+print(f"\nResNet50 target genes found: {len(resnet50_target_genes)}")
+
+for i, (idx, row) in enumerate(resnet50_target_genes.iterrows()):
+    gene_name = row['Gene']
+    x_pos = row['Regular_Correlation']
+    y_pos = row['Partial_Correlation']
+    
+    # Special positioning for EPCAM gene
+    if gene_name == 'EPCAM':
+        x_offset = 15
+        y_offset = -8
+    else:
+        x_offset = 0
+        y_offset = -8
+    
+    plt.annotate(gene_name, (x_pos, y_pos), 
+                xytext=(x_offset, y_offset), textcoords='offset points',
+                fontsize=12, fontweight='bold', 
+                color='black',
+                ha='center', va='top')
+    
+    print(f"  {gene_name}: Regular={x_pos:.3f}, Partial={y_pos:.3f}, Group={row['Gene_Group']}")
+
+# Grid and layout
+plt.grid(True, alpha=0.3, linewidth=1)
+plt.tight_layout()
+
+# Save ResNet50 plot
+resnet50_output_path = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/180_Genes_Correlation_Scatter_Plot_ResNet50.png"
+plt.savefig(resnet50_output_path, dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
+
+
+
+
+### STEP 5: Boxplot Comparison of 6 Models for Cell Type Marker Gene Prediction
+import seaborn as sns
+
+print("\n" + "="*80)
+print("STEP 5: Creating boxplot comparison of 6 models for cell type marker gene prediction")
+print("="*80)
+
+# Load correlation data for all 6 models (with updated model names)
+model_files = {
+    'Virchow2': '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_regular_correlations.csv',
+    'ResNet50': '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_ResNet50_regular_correlations.csv',
+    'UNI2-h': '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_UNI2h_regular_correlations.csv',
+    'Virchow': '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_Virchow_regular_correlations.csv',
+    'Prov-GigaPath': '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_ProvGigPath_regular_correlations.csv',
+    'CONCH': '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_CONCH_regular_correlations.csv'
+}
+
+# Load and process data for each model
+all_boxplot_data = []
+
+for model_name, file_path in model_files.items():
+    print(f"Loading {model_name} data...")
+    df = pd.read_csv(file_path, index_col=0)
+    
+    # Get first 180 genes only (columns)
+    genes = df.columns.tolist()[:180]  # Only take first 180 genes
+    
+    # For Virchow2 (multiple rows), calculate median
+    if model_name == 'Virchow2':
+        correlations = df.iloc[:, :180].median(axis=0)  # Median across samples, first 180 genes
+    else:
+        # For other models (single row)
+        correlations = df.iloc[0, :180]  # First row, first 180 genes
+    
+    # Create gene groups (same logic as scatter plots)
+    for i, gene in enumerate(genes):
+        if i < 30:
+            cell_type = 'Tumor Markers'
+        elif i < 60:
+            cell_type = 'Normal Epithelial Markers'
+        elif i < 90:
+            cell_type = 'T Markers'
+        elif i < 120:
+            cell_type = 'pan-APC Markers'
+        elif i < 150:
+            cell_type = 'Stromal Markers'
+        else:  # 150+
+            cell_type = 'Highly Variable Genes'
+        
+        # Include all gene types including Highly Variable Genes
+        all_boxplot_data.append({
+            'Model': model_name,
+            'Cell_Type': cell_type,
+            'Gene': gene,
+            'Regular_Correlation': correlations[gene]
+        })
+
+# Create DataFrame
+boxplot_df = pd.DataFrame(all_boxplot_data)
+print(f"Boxplot data shape: {boxplot_df.shape}")
+print(f"Models: {boxplot_df['Model'].unique()}")
+print(f"Cell types: {boxplot_df['Cell_Type'].unique()}")
+
+# Define color palette (similar to Figure4) with updated model names
+color_palette = {
+    'ResNet50': '#FEF0DE',
+    'CONCH': '#C43E96', 
+    'Prov-GigaPath': '#DEDBEE',
+    'UNI2-h': '#06948E',
+    'Virchow': '#F3CDCC',
+    'Virchow2': '#F0CF7F'
+}
+
+# Define the order of cell types and models for consistent plotting
+cell_type_order = ['Tumor Markers', 'Stromal Markers', 'Normal Epithelial Markers', 'T Markers', 'pan-APC Markers', 'Highly Variable Genes']
+model_order = ['ResNet50', 'CONCH', 'Prov-GigaPath', 'UNI2-h', 'Virchow', 'Virchow2']
+
+# Create boxplot with flatter aspect ratio
+plt.figure(figsize=(18, 8))
+
+# Create boxplot with specified order and thicker lines (no legend)
+box_plot = sns.boxplot(
+    data=boxplot_df, 
+    x='Cell_Type', 
+    y='Regular_Correlation', 
+    hue='Model',
+    order=cell_type_order,
+    hue_order=model_order,
+    palette=color_palette,
+    showfliers=False,  # Do not show outliers
+    linewidth=3,  # Thicker box borders
+    legend=False  # No legend
+)
+
+# Add stripplot for individual points with larger size
+sns.stripplot(
+    data=boxplot_df, 
+    x='Cell_Type', 
+    y='Regular_Correlation', 
+    hue='Model',
+    order=cell_type_order,
+    hue_order=model_order,
+    palette=color_palette,
+    size=6,  # Larger points
+    alpha=0.7,
+    dodge=True,  # Separate points by hue
+    jitter=0.3,  # Add jitter
+    edgecolor='black',
+    linewidth=0.5,  # Thicker point borders
+    legend=False  # Don't show stripplot legend
+)
+
+# Styling with larger fonts and title
+plt.xlabel('', fontsize=24, fontweight='bold')  # No x-axis label (increased by 2)
+plt.ylabel('Pearson Correlation', fontsize=24, fontweight='bold')  # Increased by 2
+plt.title('Gene Expression Prediction Comparison', fontsize=26, fontweight='bold')  # Add title
+
+# Set tick parameters with larger fonts
+plt.tick_params(axis='x', rotation=15, labelsize=20, labelcolor='black', 
+               width=2, length=6, colors='black')  # Increased by 2
+plt.tick_params(axis='y', labelsize=20, labelcolor='black', 
+               width=2, length=6, colors='black')  # Increased by 2
+
+# Make tick labels bold
+for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
+    label.set_fontweight('bold')
+
+# Update x-axis labels (keep "Markers" and change "Highly Variable Genes" to "HVGs")
+x_labels = []
+for label in plt.gca().get_xticklabels():
+    text = label.get_text()
+    if text == 'Highly Variable Genes':
+        text = 'HVGs'
+    x_labels.append(text)
+plt.gca().set_xticklabels(x_labels)
+
+# Add thick black border around the plot
+for spine in plt.gca().spines.values():
+    spine.set_linewidth(3)
+    spine.set_edgecolor('black')
+
+# Grid
+plt.grid(True, alpha=0.3, linewidth=1)
+
+# Tight layout
+plt.tight_layout()
+
+# Save plot
+boxplot_output_path = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/6_Models_Cell_Type_Markers_Boxplot.png"
+plt.savefig(boxplot_output_path, dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
+
+# Print summary statistics
+print("\nSummary statistics by model and cell type:")
+summary_stats = boxplot_df.groupby(['Model', 'Cell_Type'])['Regular_Correlation'].agg(['mean', 'std', 'median', 'count']).round(3)
+print(summary_stats)
+
+
+
+
+### STEP 6: Virchow2 vs ResNet50 Comparison Scatter Plot
+
+print("\n" + "="*80)
+print("STEP 6: Creating Virchow2 vs ResNet50 comparison scatter plot")
+print("="*80)
+
+# Load correlation data for Virchow2 and ResNet50
+virchow2_regular_df = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_regular_correlations.csv", index_col=0)
+resnet50_regular_df = pd.read_csv("/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Gene_Expression_Prediction/180genes_ResNet50_regular_correlations.csv", index_col=0)
+
+# Get first 180 genes for both models
+genes_180_comparison = virchow2_regular_df.columns.tolist()[:180]
+
+# Calculate correlations
+virchow2_regular_median = virchow2_regular_df.iloc[:, :180].median(axis=0)  # Median for Virchow2
+resnet50_regular_corr = resnet50_regular_df.iloc[0, :180]  # Single row for ResNet50
+
+print(f"Using {len(genes_180_comparison)} genes for comparison")
+
+# Create gene groups (same logic as previous scatter plots)
+comparison_gene_groups = []
+comparison_gene_colors = []
+
+for i, gene in enumerate(genes_180_comparison):
+    if i < 30:
+        comparison_gene_groups.append('Tumor Markers')
+        comparison_gene_colors.append(color_mapping['Tumor Markers'])
+    elif i < 60:
+        comparison_gene_groups.append('Normal Epithelial Markers')
+        comparison_gene_colors.append(color_mapping['Normal Epithelial Markers'])
+    elif i < 90:
+        comparison_gene_groups.append('T Markers')
+        comparison_gene_colors.append(color_mapping['T Markers'])
+    elif i < 120:
+        comparison_gene_groups.append('pan-APC Markers')
+        comparison_gene_colors.append(color_mapping['pan-APC Markers'])
+    elif i < 150:
+        comparison_gene_groups.append('Stromal Markers')
+        comparison_gene_colors.append(color_mapping['Stromal Markers'])
+    else:  # 150-179
+        comparison_gene_groups.append('Highly Variable Genes')
+        comparison_gene_colors.append(color_mapping['Highly Variable Genes'])
+
+# Create DataFrame for comparison plotting
+comparison_plot_df = pd.DataFrame({
+    'Gene': genes_180_comparison,
+    'Virchow2_Correlation': virchow2_regular_median,
+    'ResNet50_Correlation': resnet50_regular_corr,
+    'Gene_Group': comparison_gene_groups,
+    'Color': comparison_gene_colors
+})
+
+# Set fixed point size (same as previous scatter plots)
+comparison_plot_df['Point_Size'] = 150
+
+print(f"Comparison Gene group distribution:")
+print(comparison_plot_df['Gene_Group'].value_counts())
+
+# Create comparison scatter plot
+plt.figure(figsize=(12, 10))
+
+# Plot each group separately for legend
+for group in ['Tumor Markers', 'Normal Epithelial Markers', 'T Markers', 'pan-APC Markers', 'Stromal Markers', 'Highly Variable Genes']:
+    group_data = comparison_plot_df[comparison_plot_df['Gene_Group'] == group]
+    if len(group_data) > 0:
+        # Special case for Highly Variable Genes - show as HVGs with n=30
+        if group == 'Highly Variable Genes':
+            label_text = 'HVGs (n=30)'
+        else:
+            label_text = f'{group} (n={len(group_data)})'
+            
+        plt.scatter(
+            group_data['Virchow2_Correlation'],
+            group_data['ResNet50_Correlation'],
+            s=group_data['Point_Size'],
+            c=color_mapping[group],
+            alpha=0.7,
+            label=label_text,
+            edgecolors='black',
+            linewidth=0.5
+        )
+
+# Set labels with large fonts (no title)
+plt.xlabel('Pearson Correlation (Virchow2)', fontsize=24, fontweight='bold')
+plt.ylabel('Pearson Correlation (ResNet50)', fontsize=24, fontweight='bold')
+
+# Styling with larger fonts and thicker borders (same as previous scatter plots)
+plt.tick_params(axis='both', which='major', labelsize=20, width=2, length=6)
+for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
+    label.set_fontweight('bold')
+
+# Add thick black border around the plot
+for spine in plt.gca().spines.values():
+    spine.set_linewidth(3)
+    spine.set_edgecolor('black')
+
+# Legend with bold text and larger font
+legend = plt.legend(loc='upper left', fontsize=18, frameon=True, fancybox=True, shadow=True,  # Increased by 2
+                   markerscale=1.5)  # Increase legend marker size
+for text in legend.get_texts():
+    text.set_fontweight('bold')
+
+# Set axis limits (same as previous scatter plots)
+plt.xlim(-0.1, 0.6)
+plt.ylim(-0.1, 0.6)
+
+# Add diagonal reference line
+plt.plot([-0.1, 0.6], [-0.1, 0.6], 'k--', alpha=0.5, linewidth=2)
+
+# Annotate genes with Virchow2 correlation > 0.45
+high_virchow2_genes = comparison_plot_df[comparison_plot_df['Virchow2_Correlation'] > 0.45]
+print(f"\nGenes with Virchow2 correlation > 0.45: {len(high_virchow2_genes)}")
+
+for i, (idx, row) in enumerate(high_virchow2_genes.iterrows()):
+    gene_name = row['Gene']
+    x_pos = row['Virchow2_Correlation']
+    y_pos = row['ResNet50_Correlation']
+    
+    # Special positioning for EPCAM gene (same as previous scatter plots)
+    if gene_name == 'EPCAM':
+        x_offset = 15
+        y_offset = -8
+    else:
+        x_offset = 0
+        y_offset = -8
+    
+    plt.annotate(gene_name, (x_pos, y_pos), 
+                xytext=(x_offset, y_offset), textcoords='offset points',
+                fontsize=18, fontweight='black',  # Larger and blacker
+                color='black',
+                ha='center', va='top')
+    
+    print(f"  {gene_name}: Virchow2={x_pos:.3f}, ResNet50={y_pos:.3f}, Group={row['Gene_Group']}")
+
+# Grid and layout
+plt.grid(True, alpha=0.3, linewidth=1)
+plt.tight_layout()
+
+# Save comparison plot
+comparison_output_path = "/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/Virchow2_vs_ResNet50_Comparison_Scatter_Plot.png"
+plt.savefig(comparison_output_path, dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
+
+
+
+
+### STEP 7: Deep dive analysis for S100A6 gene and SU-17-14212-A1 sample
+
+print("\n" + "="*80)
+print("STEP 5: Deep dive analysis for S100A6 gene and SU-17-14212-A1 sample")
+print("="*80)
+
+# Focus on S100A6 gene
+target_gene = 'S100A6'
+target_sample = 'SU-17-14212-A1'
+
+print(f"Target gene: {target_gene}")
+print(f"Target sample (LOIO): {target_sample}")
+
+# Use data from combined_dataset (loaded from .pt file)
+X = combined_dataset['features'].numpy()  # Virchow2 features
+expression_180genes = combined_dataset['expression_300genes'].numpy()
+expression_180genes_names = combined_dataset['expression_300genes_names']
+tile_ids = combined_dataset['tile_ids']  # These are the tile IDs
+individual_ids = combined_dataset['individual_ids']  # These are the individual IDs
+
+print(f"Feature matrix shape: {X.shape}")
+print(f"Expression matrix shape: {expression_180genes.shape}")
+print(f"Number of samples: {len(tile_ids)}")
+
+# Check if the gene and individual exist
+if target_gene not in expression_180genes_names:
+    print(f"❌ Gene {target_gene} not found in expression data")
+    print(f"Available genes: {expression_180genes_names[:10]}...")  # Show first 10
+else:
+    print(f"✅ Gene {target_gene} found in expression data")
+
+# Check if target individual exists
+if target_sample not in individual_ids:
+    print(f"❌ Individual {target_sample} not found in individual data")
+    unique_individuals = list(set(individual_ids))
+    print(f"Available individuals: {unique_individuals[:5]}...")  # Show first 5
+else:
+    print(f"✅ Individual {target_sample} found in individual data")
+
+# Get target gene index and expression values
+target_gene_idx = expression_180genes_names.index(target_gene)
+y = expression_180genes[:, target_gene_idx]  # S100A6 expression values
+
+# Find all samples (tiles) belonging to the target individual
+target_individual_indices = [i for i, ind_id in enumerate(individual_ids) if ind_id == target_sample]
+print(f"Found {len(target_individual_indices)} tiles for individual {target_sample}")
+
+# For LOIO, we need to leave out ALL tiles from the target individual
+# Training set: all samples except those from target_individual
+train_indices = [i for i in range(len(individual_ids)) if individual_ids[i] != target_sample]
+test_indices = target_individual_indices
+
+print(f"Training set: {len(train_indices)} tiles")
+print(f"Test set: {len(test_indices)} tiles from individual {target_sample}")
+
+# Prepare training and test data
+X_train = X[train_indices]
+y_train = y[train_indices]
+X_test = X[test_indices]
+y_test = y[test_indices]
+
+print(f"Training data shape: X={X_train.shape}, y={y_train.shape}")
+print(f"Test data shape: X={X_test.shape}, y={y_test.shape}")
+
+# Train XGBoost model using same parameters as 180-gene training
+print(f"Training XGBoost model for {target_gene}...")
+
+# Use same parameters as in the main training loop
+xgb_params = {
+    'objective': 'reg:squarederror',
+    'eval_metric': 'rmse',
+    'tree_method': 'hist',
+    'n_jobs': -1,
+    'eta': 0.01,
+    'min_child_weight': 3,
+    'max_delta_step': 0,
+    'subsample': 0.8,
+    'colsample_bytree': 0.8,
+    'alpha': 0.1,
+    'lambda': 0.01,
+    'max_depth': 12,
+    'seed': 42
+}
+num_boost_round = 800
+
+# Create DMatrix for XGBoost
+dtrain = xgb.DMatrix(X_train, label=y_train)
+dtest = xgb.DMatrix(X_test, label=y_test)
+
+# Train model
+xgb_model = xgb.train(
+    xgb_params,
+    dtrain,
+    num_boost_round=num_boost_round,
+    verbose_eval=False
+)
+
+# Make predictions for test samples
+y_pred_test = xgb_model.predict(dtest)
+print(f"Real expression range: {y_test.min():.4f} - {y_test.max():.4f}")
+print(f"Predicted expression range: {y_pred_test.min():.4f} - {y_pred_test.max():.4f}")
+
+# Calculate correlation for test samples
+if len(y_test) > 1:
+    test_correlation = np.corrcoef(y_test, y_pred_test)[0, 1]
+    test_r2 = test_correlation ** 2
+    print(f"Test correlation: {test_correlation:.4f}, R² = {test_r2:.4f}")
+else:
+    test_correlation = np.nan
+    test_r2 = np.nan
+    print("Only one test sample - cannot calculate correlation")
+
+# Get predictions for all training samples for visualization
+y_pred_train = xgb_model.predict(dtrain)
+
+# Calculate correlation for training samples
+if len(y_train) > 1:
+    train_correlation = np.corrcoef(y_train, y_pred_train)[0, 1]
+    train_r2 = train_correlation ** 2
+    print(f"Training correlation: {train_correlation:.4f}, R² = {train_r2:.4f}")
+else:
+    train_correlation = np.nan
+    train_r2 = np.nan
+    print("Not enough training samples - cannot calculate correlation")
+
+# Combine all data for plotting
+all_real = np.concatenate([y_train, y_test])
+all_pred = np.concatenate([y_pred_train, y_pred_test])
+
+# Create sample identifiers for plotting
+train_sample_ids = [f"{tile_ids[i]}" for i in train_indices]
+test_sample_ids = [f"{tile_ids[i]}" for i in test_indices]
+all_samples = train_sample_ids + test_sample_ids
+sample_types = ['Training'] * len(train_indices) + ['Test (LOIO)'] * len(test_indices)
+
+# Get tumor proportions for all samples from combined_dataset
+cell_proportions = combined_dataset['cell_proportions'].numpy()
+cell_proportion_names = combined_dataset['cell_proportion_names']
+
+# Find Cancer_Cells_Proportion index
+cancer_cells_idx = cell_proportion_names.index('Cancer_Cells_Proportion')
+all_tumor_proportions = cell_proportions[:, cancer_cells_idx]
+
+# Get tumor proportions for plotting samples
+tumor_proportions = []
+# Training samples
+for idx in train_indices:
+    tumor_prop = all_tumor_proportions[idx]
+    tumor_proportions.append(tumor_prop)
+# Test samples
+for idx in test_indices:
+    tumor_prop = all_tumor_proportions[idx]
+    tumor_proportions.append(tumor_prop)
+
+print(f"Tumor proportion range for {target_sample}: {all_tumor_proportions[test_indices].min():.4f} - {all_tumor_proportions[test_indices].max():.4f}")
+
+# Create plotting DataFrame
+plot_data = pd.DataFrame({
+    'Sample': all_samples,
+    'Real_Expression': all_real,
+    'Predicted_Expression': all_pred,
+    'Sample_Type': sample_types,
+    'Tumor_Proportion': tumor_proportions
+})
+
+# Plot 1: Real vs Predicted Expression
+plt.figure(figsize=(10, 8))
+
+# Plot training samples
+train_data = plot_data[plot_data['Sample_Type'] == 'Training']
+plt.scatter(train_data['Predicted_Expression'], train_data['Real_Expression'], 
+           alpha=0.7, s=30, color='lightblue', edgecolor='black', linewidth=0.5,
+           label=f'Training samples (n={len(train_data)})')
+
+# Plot test individual (LOIO)
+test_data = plot_data[plot_data['Sample_Type'] == 'Test (LOIO)']
+plt.scatter(test_data['Predicted_Expression'], test_data['Real_Expression'], 
+           alpha=1.0, s=50, color='red', edgecolor='black', linewidth=2,
+           label=f'Test individual ({target_sample}, n={len(test_data)})', marker='D')
+
+# Add diagonal reference line
+min_val = min(plot_data['Real_Expression'].min(), plot_data['Predicted_Expression'].min())
+max_val = max(plot_data['Real_Expression'].max(), plot_data['Predicted_Expression'].max())
+plt.plot([min_val, max_val], [min_val, max_val], 'k--', alpha=0.5, linewidth=2, label='Perfect prediction')
+
+# Styling
+plt.xlabel('Predicted Gene Expression (log-Normalized)', fontsize=24, fontweight='bold')  # Updated label and increased font size
+plt.ylabel('True Gene Expression (log-Normalized)', fontsize=24, fontweight='bold')  # Updated label and increased font size
+plt.title(f'{target_gene} Expression Prediction\n(LOIO: {target_sample})', fontsize=20, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=20, width=2, length=6)  # Increased tick label size
+for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
+    label.set_fontweight('bold')
+
+# Updated legend with larger, bold font
+legend = plt.legend(fontsize=18, frameon=True, fancybox=True, shadow=True, markerscale=1.5)
+for text in legend.get_texts():
+    text.set_fontweight('bold')
+
+# Add Pearson correlation annotations in the upper left corner
+if not np.isnan(train_correlation):
+    plt.text(0.02, 0.98, f'Training Pearson r = {train_correlation:.3f}', 
+             transform=plt.gca().transAxes, fontsize=16, fontweight='bold',
+             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+if not np.isnan(test_correlation):
+    plt.text(0.02, 0.92, f'Testing Pearson r = {test_correlation:.3f}', 
+             transform=plt.gca().transAxes, fontsize=16, fontweight='bold',
+             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+plt.grid(True, alpha=0.3, linewidth=1)
+plt.tight_layout()
+
+# Save plot 1
+plot1_path = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/{target_gene}_Real_vs_Predicted_LOIO_{target_sample}.png"
+plt.savefig(plot1_path, dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
+
+print(f"✅ Plot 1 saved: {plot1_path}")
+
+# Plot 2: Real Expression vs Tumor Proportion (Density Heatmap)
+plt.figure(figsize=(10, 8))
+
+# Remove samples with NaN tumor proportions
+plot_data_clean = plot_data.dropna(subset=['Tumor_Proportion'])
+
+# Create density heatmap using hexbin (nature-style)
+x_data = plot_data_clean['Tumor_Proportion']
+y_data = plot_data_clean['Real_Expression']
+
+# Create ultra-fine density heatmap using 2D histogram
+# Use bins for very fine granularity
+h, xedges, yedges = np.histogram2d(x_data, y_data, bins=60)
+extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+
+# Create the heatmap with fine resolution
+hb = plt.imshow(h.T, extent=extent, origin='lower', cmap='RdYlBu_r', 
+               alpha=0.9, aspect='auto', interpolation='gaussian')
+
+# Add colorbar
+cb = plt.colorbar(hb)
+cb.set_label('Density (Number of samples)', fontsize=16, fontweight='bold')
+cb.ax.tick_params(labelsize=14)
+for label in cb.ax.get_yticklabels():
+    label.set_fontweight('bold')
+
+# Calculate and display correlation
+if len(plot_data_clean) > 1:
+    tumor_real_corr = np.corrcoef(x_data, y_data)[0, 1]
+    plt.text(0.05, 0.95, f'Pearson r = {tumor_real_corr:.3f}', 
+             transform=plt.gca().transAxes, fontsize=16, fontweight='bold',
+             bbox=dict(boxstyle="round,pad=0.5", facecolor="white", alpha=0.9, edgecolor='black'))
+
+# Styling
+plt.xlabel('Deconvoluted Tumor Proportion', fontsize=18, fontweight='bold')
+plt.ylabel(f'{target_gene} Real Expression', fontsize=18, fontweight='bold')
+plt.title(f'{target_gene} Expression vs Tumor Proportion\n(All samples, n={len(plot_data_clean)})', fontsize=20, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=14, width=2, length=6)
+for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
+    label.set_fontweight('bold')
+
+# Add subtle grid
+plt.grid(True, alpha=0.2, linewidth=1)
+plt.tight_layout()
+
+# Save plot 2
+plot2_path = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/{target_gene}_Real_vs_TumorProp_LOIO_{target_sample}.png"
+plt.savefig(plot2_path, dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
 
 
