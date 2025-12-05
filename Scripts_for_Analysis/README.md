@@ -13,7 +13,6 @@ This directory contains scripts for generating all figures and performing analys
 - **Script**: `Figure3_UMAP_Contri_RegressOut.py`
 - **Purpose**: Performs UMAP dimensionality reduction with regression of confounding factors
 - **Output**: UMAP plots with contribution analysis and corrected embeddings
-- **Note**: Also generates Figure S5-S8
 
 ### Figure 4: XGBoost Model Comparison
 - **Script**: `Figure4_Xgboost_comparison.py`
@@ -30,21 +29,32 @@ This directory contains scripts for generating all figures and performing analys
 - **Purpose**: Performs soft tissue segmentation analysis for spatial transcriptomics data
 - **Output**: Segmentation visualizations and analysis
 
-### Figure 7: TCGA Dataset Analysis
-- **Script**: `Figure7_TCGA_Analysis.py`
-- **Purpose**: Analyzes TCGA colorectal cancer data using trained STPath models
-- **Output**: External validation results and feature analysis
-
-- **Script**: `Figure7_TCGA_Survival.py`
-- **Purpose**: Performs survival analysis using TCGA data and STPath predictions
+### Figure 7: TCGA COAD Survival Analysis
+- **Script**: `Figure7_TCGA_COAD_Survival.py`
+- **Purpose**: Performs survival analysis using TCGA COAD data and STPath predictions
 - **Output**: Survival curves and statistical analysis
 
 ## Supplementary Figures
+
+### Figure S7: TCGA COAD Analysis Pipeline
+- **Script**: `FigureS7_TCGA_COAD_Analysis.py`
+- **Purpose**: Processes TCGA COAD whole slide images to predict cell type proportions
+- **Output**: Tile-level predictions, hexagonal heatmaps, and distance metrics
 
 ### Figure S10: Gene Expression Prediction
 - **Script**: `FigureS10_expression_prediction.py`
 - **Purpose**: Predicts gene expression levels from histopathology features
 - **Output**: Expression prediction accuracy and correlation analysis
+
+### Figure S11: Cell Type Distribution Analysis
+- **Script**: `FigureS11_Cell_Type_Distribution_Analysis.py`
+- **Purpose**: Analyzes cell type distribution patterns across samples
+- **Output**: Distribution plots and statistical analysis
+
+### Figure S13: BRCA vs COAD Feature Importance Comparison
+- **Script**: `FigureS13_Compare_BRCA_COAD_Feature_Importance.py`
+- **Purpose**: Compares feature importance between BRCA and COAD models
+- **Output**: Cross-cancer feature comparison analysis
 
 ## Tables
 
@@ -59,6 +69,13 @@ This directory contains scripts for generating all figures and performing analys
 - **Script**: `Sup_file_S3_Make_Important_Features.py`
 - **Purpose**: Extracts and processes important features from trained XGBoost models
 - **Output**: Feature importance tables for all cell types and models
+
+## R Scripts
+
+### COAD Survival Analysis (R)
+- **Script**: `COAD_survival.R`
+- **Purpose**: R-based survival analysis for COAD cohort
+- **Output**: Survival analysis results and plots
 
 ## Usage
 

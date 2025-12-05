@@ -18,7 +18,7 @@ This step forms the core of the STPath-COAD framework, where multiple pre-traine
   - **ProvGigapath**: Xu, Hanwen, et al. "A whole-slide foundation model for digital pathology from real-world data." Nature 630.8015 (2024): 181-188.
   - **Virchow**: Vorontsov, Eugene, et al. "A foundation model for clinical-grade computational pathology and rare cancers detection." Nature medicine 30.10 (2024): 2924-2935.
   - **Virchow2**: Zimmermann, Eric, et al. "Virchow2: Scaling self-supervised mixed magnification models in pathology." arXiv preprint arXiv:2408.00738 (2024)
-  - **ResNet50**: He, Kaiming, et al. “Deep Residual Learning for Image Recognition.” Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, 2016, pp. 770–778.
+  - **ResNet50**: He, Kaiming, et al. "Deep Residual Learning for Image Recognition." Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, 2016, pp. 770–778.
 - **Features**:
   - Batch processing for efficiency
   - GPU acceleration support
@@ -26,12 +26,6 @@ This step forms the core of the STPath-COAD framework, where multiple pre-traine
   - Progress tracking and logging
 - **Input**: H&E image patches (240x240 pixels)
 - **Output**: Feature matrices for each foundation model
-
-#### `Precompute_Features_Using_Foundation_Models_BRCA.py`
-- **Purpose**: Feature extraction for Breast Cancer (BRCA) data using the same foundation models
-- **Features**: BRCA-specific processing and validation
-- **Input**: BRCA H&E patches
-- **Output**: BRCA feature matrices
 
 ### 2. Model Training and Prediction
 
@@ -51,6 +45,15 @@ This step forms the core of the STPath-COAD framework, where multiple pre-traine
   - Other Immune Cells prediction model
 - **Input**: Extracted features + CARD deconvolution results (ground truth)
 - **Output**: Trained XGBoost models and prediction results
+
+#### `COAD_XGBoost_WithinSample.py`
+- **Purpose**: Performs within-sample XGBoost analysis for internal validation
+- **Features**:
+  - Sample-level cross-validation
+  - Internal consistency evaluation
+  - Per-sample performance metrics
+- **Input**: Extracted features + CARD deconvolution results
+- **Output**: Within-sample prediction results and metrics
 
 
 ## Output Structure
