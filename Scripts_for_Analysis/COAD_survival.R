@@ -202,7 +202,6 @@ df <- df %>%
       .names = "{.col}_bin"
     ))
 
-
 # KM by median distance (Low vs High) 
 distance_bin_vars <- paste0(dist_median, "_bin")
 
@@ -234,6 +233,107 @@ combined_median <- ggarrange(
   )
 
 ggsave("COAD_KM_PFI_by_Distance_All_Median_Groups.png", combined_median, width = 16, height =24, dpi = 300)
+
+#### Tumor → APC distance: KM PFI stratified by Stage ####
+
+# Specify the Tumor → APC median distance binary variable
+
+df <- df %>%
+  mutate(Stage =  case_when(
+    Stage_Group %in% 
+      c("Stage_II", "Stage_III") ~ "Stage II or III",
+    Stage_Group == "Stage_I" ~ "Stage I",
+    Stage_Group == "Stage_IV" ~ "Stage IV",
+    TRUE ~ NA_character_
+  ))
+
+# Fit KM with Tumor→APC (Low/High) and Stage_Group
+fit_pfi_tumor_apc_stage <- survfit(
+  Surv(PFI.time, PFI) ~ Cancer_to_pan.APC_median_bin + Stage,
+  data = df
+)
+
+# Plot: one panel per stage, lines = Low vs High Tumor→APC distance
+p_pfi_tumor_apc_stage <- ggsurvplot_facet(
+  fit_pfi_tumor_apc_stage,
+  data = df,
+  facet.by = "Stage",
+  legend.title = "Cancer_to_pan.APC Median Distance",
+  legend.labs  = levels(df[[tumor_apc_bin]]),
+  pval = TRUE,
+  risk.table = FALSE,
+  xlab = "Time (days)",
+  ylab = "Progression-Free Survival Probability",
+  ggtheme = theme_bw(base_size = 16),
+  palette = c("blue", "orange")
+)
+
+ggsave(
+  "COAD_KM_PFI_Tumor_to_APC_by_Stage.png",
+  p_pfi_tumor_apc_stage$plot,
+  width = 10, height = 8, dpi = 300
+)
+
+
+
+#### Tumor → APC distance: KM PFI, top 1/3 vs bottom 1/3, stratified by Stage ####
+
+tumor_apc_var <- "Cancer_to_pan.APC_median" 
+tumor_apc_qs <- quantile(df[[tumor_apc_var]], probs = c(1/3, 2/3), na.rm = TRUE)
+
+df_tumor_apc_tert <- df %>%
+  mutate(
+    Cancer_to_pan.APC_median_tert = cut(
+      .data[[tumor_apc_var]],
+      breaks = c(-Inf, tumor_apc_qs[1], tumor_apc_qs[2], Inf),
+      labels = c("Bottom 1/3", "Middle 1/3", "Top 1/3"),
+      include.lowest = TRUE
+    )
+  ) %>%
+  # Keep only bottom vs top third
+  filter(Cancer_to_pan.APC_median_tert != "Middle 1/3") %>%
+  droplevels()
+
+table(df_tumor_apc_tert$Cancer_to_pan.APC_median_tert, df_tumor_apc_tert$Stage_Group)
+
+# KM fit: Tumor→APC tertiles (Bottom vs Top) + Stage_Group
+fit_pfi_tumor_apc_tert_stage <- survfit(
+  Surv(PFI.time, PFI) ~ Cancer_to_pan.APC_median_tert + Stage,
+  data = df_tumor_apc_tert
+)
+
+# Plot: one facet per stage, lines = Bottom 1/3 vs Top 1/3
+p_pfi_tumor_apc_tert_stage <- ggsurvplot_facet(
+  fit_pfi_tumor_apc_tert_stage,
+  data = df_tumor_apc_tert,
+  facet.by    = "Stage",
+  legend.title = "Cancer_to_pan.APC Median Distance",
+  legend.labs  = levels(df_tumor_apc_tert$Cancer_to_pan.APC_median_tert),
+  pval        = TRUE,
+  risk.table  = FALSE,
+  xlab        = "Time (days)",
+  ylab        = "Progression-Free Survival Probability",
+  ggtheme     = theme_bw(base_size = 16),
+  palette     = c("blue", "orange")  # Bottom 1/3, Top 1/3
+)
+
+ggsave(
+  "COAD_KM_PFI_Tumor_to_APC_Tertiles_by_Stage.png",
+  p_pfi_tumor_apc_tert_stage$plot,
+  width = 10, height = 8, dpi = 300
+)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #### Age: KM quartiles + histogram ####
