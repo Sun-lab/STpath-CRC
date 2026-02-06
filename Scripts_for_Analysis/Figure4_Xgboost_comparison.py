@@ -2,15 +2,13 @@
 STPath-COAD: XGBoost Model Comparison Analysis for Figure 4
 ==========================================================
 
-This script performs comprehensive comparison analysis of different XGBoost models
-and foundation model combinations for cell type proportion prediction.
+This script performs cross-validated performance, gene expression, and spatial agreement of STpath predictions for colorectal cancer,
+to generate plots for Figure 4 panel A-C.
 
 Author: Saishi Cui
-Date: December 2025
+Date: Feb 2026
 
-Purpose: Compare performance of different foundation models (ResNet50, Conch, ProvGigapath, 
-UNI2h, Virchow, Virchow2) and their combination for cell type proportion prediction.
-Generate visualizations and statistical comparisons for Figure 4 of the paper.
+
 """
 
 import pandas as pd
