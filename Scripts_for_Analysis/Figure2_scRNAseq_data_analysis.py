@@ -511,7 +511,7 @@ InputDf_for_CARD_meta.to_csv('scRNAseq_data/InputDf_for_CARD_meta.csv')
 
 
 
-###### Final Umap ######
+###### Figure 2 (Panel A) (Final Umap) ######
 scData_DoubleConfirmed = sc.read_h5ad('scRNAseq_data/scData_DoubleConfirmed.h5ad')
 
 # Extract UMAP coordinates and labels
@@ -626,7 +626,7 @@ for key, value in final_marker_genes_dict.items():
 
 
 
-### Heatmap of selected marker genes
+### Figure 2 (Panel B) (Heatmap of selected marker genes)
 
 InputDf_for_CARD_meta = pd.read_csv('scRNAseq_data/InputDf_for_CARD_meta.csv', index_col= 0)
 InputDf_for_CARD_Original = pd.read_csv('scRNAseq_data/InputDf_for_CARD_Original.csv', index_col=0)
@@ -1017,228 +1017,6 @@ InputDf_for_CARD_meta = pd.read_csv('scRNAseq_data/InputDf_for_CARD_meta.csv', i
 
 
 
-### Figure 2(E)
-
-
-### Marker genes refinement
-with open('data/scRNAseq_data/final_marker_genes_dict.json', 'r') as f:
-    final_marker_genes_dict = json.load(f)
-
-del final_marker_genes_dict["Cancer"]
-del final_marker_genes_dict["Normal Epithelia"]
-
-
-
-InputDf_for_CARD_SelectedGenes = pd.read_csv('scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
-InputDf_for_CARD_meta = pd.read_csv('scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
-InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CD4+ T"] = "T"
-InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CD8+ T"] = "T"
-
-InputDF_CounNorm_SelectedGenes = InputDf_for_CARD_SelectedGenes.T.div(InputDf_for_CARD_SelectedGenes.T.sum(axis=1), axis=0)
-
-  ## ranking marker genes based on the log2FC for each cell type
-final_ranked_gene_dict = {}
-for cell_type in InputDf_for_CARD_meta["Cell Type"].unique():
-    
-    temp_data = []
-    
-    for gene in InputDF_CounNorm_SelectedGenes.columns:
-        target_cell_GE_mean = InputDF_CounNorm_SelectedGenes.loc[InputDf_for_CARD_meta["Cell Type"] == cell_type, gene].mean()
-        non_target_cell_GE_mean = InputDF_CounNorm_SelectedGenes.loc[InputDf_for_CARD_meta["Cell Type"] != cell_type, gene].mean()
-        log2FC = np.log2(target_cell_GE_mean+1e-8) - np.log2(non_target_cell_GE_mean+1e-8)
-        
-        if log2FC >= 1:
-            temp_data.append({"Gene": gene, "log2FC": log2FC})
-    
-    unsorted_df = pd.DataFrame(temp_data, columns=["Gene", "log2FC"])
-    sorted_df = unsorted_df.sort_values(by="log2FC", ascending=False)
-    selected_genes = sorted_df["Gene"].tolist()
-    final_ranked_gene_dict[cell_type] = selected_genes
-    print(cell_type, len(final_ranked_gene_dict[cell_type]))
-
-
-
-
-cell_type = "Cancer Cells"
-Region_ID = "6723_KL_1_region0"
-expression_df = pd.read_csv(f'CARD_Need_Files/{Region_ID}_expression.csv', index_col=0)
-Celltype_proportion_df = pd.read_csv(f'CARD_Results_Regions/{Region_ID}_celltype_proportion_modified.csv', index_col=0)
-B_matrix_df = pd.read_csv(f'data/CARD_Results_Regions/{Region_ID}_B_Matrix_modified.csv', index_col=0)
-        
-cell_type_order = ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I", 
-"ABS", "CT", "EE", "TUF", "T", "PLA", "MAS", "MYE", "B", "FIB", "END"]
-
-
-Celltype_proportion_df = Celltype_proportion_df[cell_type_order]
-
-B_matrix_df.columns = ['ASC I', 'ASC II', 'ASC III', 'CSC III', 'CSC I', 'CSC IV', "CSC II", 'SSC I', 'ABS', 'CT', 'EE', 'TUF', 'T', 'PLA', 'MAS', 'MYE', 'FIB', 'B', 'END']
-B_matrix_df = B_matrix_df[cell_type_order]
-
-kept_barcode = Celltype_proportion_df.index.tolist()
-expression_df = expression_df.loc[kept_barcode]
-
-library_size = expression_df.sum(axis=1)
-normalized_df = expression_df.copy()
-normalized_df = expression_df.div(library_size, axis=0)
-
-# Remove marker genes not in B_matrix_df
-marker_genes_clean_dict = {}
-for key, value in final_ranked_gene_dict.items():
-    marker_genes_clean_dict[key] = list(set(value).intersection(set(B_matrix_df.index)))
-
-# Group top 5 marker genes for each cancer cell and normal epithelial cell type
-marker_genes_clean_dict["Cancer Cells"] = list(set(marker_genes_clean_dict["ASC I"][:5] + marker_genes_clean_dict["ASC II"][:5] +\
-                                    marker_genes_clean_dict["ASC III"][:5] + marker_genes_clean_dict["CSC I"][:5] +\
-                                    marker_genes_clean_dict["CSC II"][:5] + marker_genes_clean_dict["CSC III"][:5] +\
-                                    marker_genes_clean_dict["CSC IV"][:5] + marker_genes_clean_dict["SSC I"][:5]))
-
-marker_genes_clean_dict["Normal Epithelial Cells"] = list(set(marker_genes_clean_dict["ABS"][:10] + marker_genes_clean_dict["CT"][:10] +\
-                                            marker_genes_clean_dict["EE"][:10] + marker_genes_clean_dict["TUF"][:10]))
-
-marker_genes_clean_dict["T Cells"] = marker_genes_clean_dict["T"][:40]
-marker_genes_clean_dict["Other Immune Cells"] = list(set(marker_genes_clean_dict["PLA"][:10] + marker_genes_clean_dict["MAS"][:10] + marker_genes_clean_dict["MYE"][:10] + marker_genes_clean_dict["B"][:10]))
-marker_genes_clean_dict["Stromal Cells"] = list(set(marker_genes_clean_dict["FIB"][:20] + marker_genes_clean_dict["END"][:20]))
-
-for cell_type_inner in ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I", "ABS", "CT", "EE", "TUF", "T", "PLA", "MAS", "MYE", "B", "FIB", "END"]:
-    del marker_genes_clean_dict[cell_type_inner]
-
-# Calculate relative expression of marker genes
-Cancer_MarkerGE = normalized_df[marker_genes_clean_dict["Cancer Cells"]].div(B_matrix_df.T.loc[["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I"],marker_genes_clean_dict["Cancer Cells"]].mean(axis=0)).mean(axis=1)  
-NE_MarkerGE = normalized_df[marker_genes_clean_dict["Normal Epithelial Cells"]].div(B_matrix_df.T.loc[["ABS", "CT", "EE", "TUF"],marker_genes_clean_dict["Normal Epithelial Cells"]].mean(axis=0)).mean(axis=1)
-T_MarkerGE = normalized_df[marker_genes_clean_dict["T Cells"]].div(B_matrix_df.T.loc[["T"],marker_genes_clean_dict["T Cells"]].mean(axis=0)).mean(axis = 1)
-Other_Immune_MarkerGE = normalized_df[marker_genes_clean_dict["Other Immune Cells"]].div(B_matrix_df.T.loc[["PLA", "MAS", "MYE", "B"],marker_genes_clean_dict["Other Immune Cells"]].mean(axis=0)).mean(axis = 1)
-Stromal_MarkerGE = normalized_df[marker_genes_clean_dict["Stromal Cells"]].div(B_matrix_df.T.loc[["FIB", "END"],marker_genes_clean_dict["Stromal Cells"]].mean(axis=0)).mean(axis = 1)
-    
-marker_genes_expression_df_grouped = pd.concat([Cancer_MarkerGE, NE_MarkerGE, T_MarkerGE, Other_Immune_MarkerGE, Stromal_MarkerGE], axis=1)
-marker_genes_expression_df_grouped.columns = ["Cancer Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells", "Stromal Cells"]
-relative_marker_genes_expression_df_grouped = marker_genes_expression_df_grouped.div(marker_genes_expression_df_grouped.sum(axis=1)+1e-8, axis=0)
-
-Total_Cancer_Celltype_proportion = Celltype_proportion_df.iloc[:,0:8].sum(axis=1)
-Total_Normal_Epith_Celltype_proportion = Celltype_proportion_df.iloc[:,8:12].sum(axis=1)
-Total_T_Celltype_proportion = Celltype_proportion_df.iloc[:,12]
-Total_Other_Immune_Celltype_proportion = Celltype_proportion_df.iloc[:,13:17].sum(axis=1)
-Total_Stromal_Celltype_proportion = Celltype_proportion_df.iloc[:,17:].sum(axis=1)
-Celltype_proportion_df_grouped = pd.concat([Total_Cancer_Celltype_proportion, Total_Normal_Epith_Celltype_proportion, Total_T_Celltype_proportion, Total_Other_Immune_Celltype_proportion, Total_Stromal_Celltype_proportion], axis=1)
-Celltype_proportion_df_grouped.columns = ["Cancer Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells", "Stromal Cells"]
-
-
-focus_celltype_percent = (Celltype_proportion_df_grouped[cell_type]*100).round(4).values.tolist()
-focus_relative_marker_genes_expression = (relative_marker_genes_expression_df_grouped[cell_type]*100).round(4).values.tolist()
-
-
-
-Spatial_location_df = pd.read_csv('CARD_Need_Files/6723_KL_1_region0_spatial.csv', index_col=0)
-showcase_df = pd.concat([pd.Series(focus_celltype_percent), pd.Series(focus_relative_marker_genes_expression), Spatial_location_df[["x", "y"]].reset_index(drop=True)], axis=1)
-showcase_df.columns = ["Proportion", "Expression", "x", "y"]
-
-
-plt.figure(figsize=(10, 8))
-ax = plt.gca()
-
-# create the scatter plot with hexagon markers
-plt.scatter(
-    x=showcase_df['x'],
-    y=showcase_df['y'],
-    c=showcase_df['Proportion'],
-    cmap='coolwarm',  # the color from light to dark
-    marker='h',  # hexagon marker
-    s=100,  # marker size
-    edgecolors='black',
-    linewidth=0.5
-)
-
-# Add colorbar
-cbar = plt.colorbar()
-cbar.set_label('Relative Markers GE (%)', fontsize=25, fontweight='bold', color='black')
-cbar.ax.tick_params(labelsize=18, colors='black', width=3)
-for label in cbar.ax.get_yticklabels():
-    label.set_fontweight('bold')
-    label.set_color('black')
-
-# Invert the y axis to match the image coordinate system
-ax.invert_yaxis()
-
-# Set all four borders as thick black lines
-ax.spines['top'].set_visible(True)
-ax.spines['right'].set_visible(True)
-ax.spines['left'].set_visible(True)
-ax.spines['bottom'].set_visible(True)
-ax.spines['top'].set_linewidth(5)
-ax.spines['right'].set_linewidth(5)
-ax.spines['left'].set_linewidth(5)
-ax.spines['bottom'].set_linewidth(5)
-ax.spines['top'].set_color('black')
-ax.spines['right'].set_color('black')
-ax.spines['left'].set_color('black')
-ax.spines['bottom'].set_color('black')
-
-# Remove title and axis labels
-plt.title('')
-plt.xlabel('')
-plt.ylabel('')
-
-# Remove ticks
-ax.set_xticks([])
-ax.set_yticks([])
-plt.savefig(f"Visual/6723_KL_1_region0_Cancer_cells_proportion.png", dpi=600, bbox_inches='tight')
-# Show the figure
-plt.show()
-
-
-# Set the figure size
-plt.figure(figsize=(10, 8))
-ax = plt.gca()
-
-# Create the scatter plot with hexagon markers
-plt.scatter(
-    x=showcase_df['x'],
-    y=showcase_df['y'],
-    c=showcase_df['Expression'],
-    cmap='coolwarm',  # the color from light to dark
-    marker='h',  # hexagon marker
-    s=100,  # marker size
-    edgecolors='black',
-    linewidth=0.5
-)
-
-# Add colorbar
-cbar = plt.colorbar()
-cbar.set_label('Relative Marker Gene Expression (%)', fontsize=25, fontweight='bold', color='black')
-cbar.ax.tick_params(labelsize=18, colors='black', width=3)
-for label in cbar.ax.get_yticklabels():
-    label.set_fontweight('bold')
-    label.set_color('black')
-
-# Invert the y axis to match the image coordinate system
-ax.invert_yaxis()
-
-# Set all four borders as thick black lines
-ax.spines['top'].set_visible(True)
-ax.spines['right'].set_visible(True)
-ax.spines['left'].set_visible(True)
-ax.spines['bottom'].set_visible(True)
-ax.spines['top'].set_linewidth(5)
-ax.spines['right'].set_linewidth(5)
-ax.spines['left'].set_linewidth(5)
-ax.spines['bottom'].set_linewidth(5)
-ax.spines['top'].set_color('black')
-ax.spines['right'].set_color('black')
-ax.spines['left'].set_color('black')
-ax.spines['bottom'].set_color('black')
-
-# Remove title and axis labels
-plt.title('')
-plt.xlabel('')
-plt.ylabel('')
-
-# Remove ticks
-ax.set_xticks([])
-ax.set_yticks([])
-
-plt.savefig(f"Visual/6723_KL_1_region0_Cancer_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight')
-plt.show()
-
-
 
 
 ### Figure 2 (C)
@@ -1248,9 +1026,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-Celltype_proportion_df_mean_Cody = pd.read_csv('/Users/scui2/Desktop/CARD_Results_Files/Celltype_proportion_df_mean_Cody.csv', index_col=0)
-Celltype_proportion_df_mean_FH = pd.read_csv('/Users/scui2/Desktop/FredHutch_Colorectal/CARD_Results_Files/Celltype_proportion_df_mean_FH.csv', index_col=0)
-Celltype_proportion_df_mean_HEST = pd.read_csv('/Users/scui2/Desktop/hest_data/CARD_Results_Files/Celltype_proportion_df_mean_HEST.csv', index_col=0)
+Celltype_proportion_df_mean_Cody = pd.read_csv('/CARD_Results_Files/Celltype_proportion_df_mean_Cody.csv', index_col=0)
+Celltype_proportion_df_mean_FH = pd.read_csv('/FredHutch_Colorectal/CARD_Results_Files/Celltype_proportion_df_mean_FH.csv', index_col=0)
+Celltype_proportion_df_mean_HEST = pd.read_csv('/hest_data/CARD_Results_Files/Celltype_proportion_df_mean_HEST.csv', index_col=0)
 
 # Fix the total dataframe creation - merge all proportion columns while keeping Cell Type
 # First get the Cell Type column from any of the dataframes (they should all be the same)
@@ -1473,13 +1251,243 @@ def CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True):
     # show the figure
     plt.tight_layout()
     if group == True:
-        plt.savefig('/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/CARD_Results_Vis_Combined_Grouped.png', dpi=600)
+        plt.savefig('/Visual/CARD_Results_Vis_Combined_Grouped.png', dpi=600)
     else:
-        plt.savefig('/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/CARD_Results_Vis_Combined_Ungrouped.png', dpi=600)
+        plt.savefig('Visual/CARD_Results_Vis_Combined_Ungrouped.png', dpi=600)
     plt.close()
 
 
 
 CARD_results_vis(df = Celltype_proportion_df_mean_total, group = True)
 CARD_results_vis(df = Celltype_proportion_df_mean_total, group = False)
+
+
+
+
+
+
+
+
+### Figure 2 (Panel E)
+
+
+### Marker genes refinement
+with open('data/scRNAseq_data/final_marker_genes_dict.json', 'r') as f:
+    final_marker_genes_dict = json.load(f)
+
+del final_marker_genes_dict["Cancer"]
+del final_marker_genes_dict["Normal Epithelia"]
+
+
+
+InputDf_for_CARD_SelectedGenes = pd.read_csv('scRNAseq_data/InputDf_for_CARD_SelectedGenes.csv', index_col=0)
+InputDf_for_CARD_meta = pd.read_csv('scRNAseq_data/InputDf_for_CARD_meta.csv', index_col=0)
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CD4+ T"] = "T"
+InputDf_for_CARD_meta["Cell Type"][InputDf_for_CARD_meta["Cell Type"] == "CD8+ T"] = "T"
+
+InputDF_CounNorm_SelectedGenes = InputDf_for_CARD_SelectedGenes.T.div(InputDf_for_CARD_SelectedGenes.T.sum(axis=1), axis=0)
+
+  ## ranking marker genes based on the log2FC for each cell type
+final_ranked_gene_dict = {}
+for cell_type in InputDf_for_CARD_meta["Cell Type"].unique():
+    
+    temp_data = []
+    
+    for gene in InputDF_CounNorm_SelectedGenes.columns:
+        target_cell_GE_mean = InputDF_CounNorm_SelectedGenes.loc[InputDf_for_CARD_meta["Cell Type"] == cell_type, gene].mean()
+        non_target_cell_GE_mean = InputDF_CounNorm_SelectedGenes.loc[InputDf_for_CARD_meta["Cell Type"] != cell_type, gene].mean()
+        log2FC = np.log2(target_cell_GE_mean+1e-8) - np.log2(non_target_cell_GE_mean+1e-8)
+        
+        if log2FC >= 1:
+            temp_data.append({"Gene": gene, "log2FC": log2FC})
+    
+    unsorted_df = pd.DataFrame(temp_data, columns=["Gene", "log2FC"])
+    sorted_df = unsorted_df.sort_values(by="log2FC", ascending=False)
+    selected_genes = sorted_df["Gene"].tolist()
+    final_ranked_gene_dict[cell_type] = selected_genes
+    print(cell_type, len(final_ranked_gene_dict[cell_type]))
+
+
+
+
+cell_type = "Cancer Cells"
+Region_ID = "6723_KL_1_region0"
+expression_df = pd.read_csv(f'CARD_Need_Files/{Region_ID}_expression.csv', index_col=0)
+Celltype_proportion_df = pd.read_csv(f'CARD_Results_Regions/{Region_ID}_celltype_proportion_modified.csv', index_col=0)
+B_matrix_df = pd.read_csv(f'data/CARD_Results_Regions/{Region_ID}_B_Matrix_modified.csv', index_col=0)
+        
+cell_type_order = ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I", 
+"ABS", "CT", "EE", "TUF", "T", "PLA", "MAS", "MYE", "B", "FIB", "END"]
+
+
+Celltype_proportion_df = Celltype_proportion_df[cell_type_order]
+
+B_matrix_df.columns = ['ASC I', 'ASC II', 'ASC III', 'CSC III', 'CSC I', 'CSC IV', "CSC II", 'SSC I', 'ABS', 'CT', 'EE', 'TUF', 'T', 'PLA', 'MAS', 'MYE', 'FIB', 'B', 'END']
+B_matrix_df = B_matrix_df[cell_type_order]
+
+kept_barcode = Celltype_proportion_df.index.tolist()
+expression_df = expression_df.loc[kept_barcode]
+
+library_size = expression_df.sum(axis=1)
+normalized_df = expression_df.copy()
+normalized_df = expression_df.div(library_size, axis=0)
+
+# Remove marker genes not in B_matrix_df
+marker_genes_clean_dict = {}
+for key, value in final_ranked_gene_dict.items():
+    marker_genes_clean_dict[key] = list(set(value).intersection(set(B_matrix_df.index)))
+
+# Group top 5 marker genes for each cancer cell and normal epithelial cell type
+marker_genes_clean_dict["Cancer Cells"] = list(set(marker_genes_clean_dict["ASC I"][:5] + marker_genes_clean_dict["ASC II"][:5] +\
+                                    marker_genes_clean_dict["ASC III"][:5] + marker_genes_clean_dict["CSC I"][:5] +\
+                                    marker_genes_clean_dict["CSC II"][:5] + marker_genes_clean_dict["CSC III"][:5] +\
+                                    marker_genes_clean_dict["CSC IV"][:5] + marker_genes_clean_dict["SSC I"][:5]))
+
+marker_genes_clean_dict["Normal Epithelial Cells"] = list(set(marker_genes_clean_dict["ABS"][:10] + marker_genes_clean_dict["CT"][:10] +\
+                                            marker_genes_clean_dict["EE"][:10] + marker_genes_clean_dict["TUF"][:10]))
+
+marker_genes_clean_dict["T Cells"] = marker_genes_clean_dict["T"][:40]
+marker_genes_clean_dict["Other Immune Cells"] = list(set(marker_genes_clean_dict["PLA"][:10] + marker_genes_clean_dict["MAS"][:10] + marker_genes_clean_dict["MYE"][:10] + marker_genes_clean_dict["B"][:10]))
+marker_genes_clean_dict["Stromal Cells"] = list(set(marker_genes_clean_dict["FIB"][:20] + marker_genes_clean_dict["END"][:20]))
+
+for cell_type_inner in ["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I", "ABS", "CT", "EE", "TUF", "T", "PLA", "MAS", "MYE", "B", "FIB", "END"]:
+    del marker_genes_clean_dict[cell_type_inner]
+
+# Calculate relative expression of marker genes
+Cancer_MarkerGE = normalized_df[marker_genes_clean_dict["Cancer Cells"]].div(B_matrix_df.T.loc[["ASC I", "ASC II", "ASC III", "CSC I", "CSC II", "CSC III", "CSC IV", "SSC I"],marker_genes_clean_dict["Cancer Cells"]].mean(axis=0)).mean(axis=1)  
+NE_MarkerGE = normalized_df[marker_genes_clean_dict["Normal Epithelial Cells"]].div(B_matrix_df.T.loc[["ABS", "CT", "EE", "TUF"],marker_genes_clean_dict["Normal Epithelial Cells"]].mean(axis=0)).mean(axis=1)
+T_MarkerGE = normalized_df[marker_genes_clean_dict["T Cells"]].div(B_matrix_df.T.loc[["T"],marker_genes_clean_dict["T Cells"]].mean(axis=0)).mean(axis = 1)
+Other_Immune_MarkerGE = normalized_df[marker_genes_clean_dict["Other Immune Cells"]].div(B_matrix_df.T.loc[["PLA", "MAS", "MYE", "B"],marker_genes_clean_dict["Other Immune Cells"]].mean(axis=0)).mean(axis = 1)
+Stromal_MarkerGE = normalized_df[marker_genes_clean_dict["Stromal Cells"]].div(B_matrix_df.T.loc[["FIB", "END"],marker_genes_clean_dict["Stromal Cells"]].mean(axis=0)).mean(axis = 1)
+    
+marker_genes_expression_df_grouped = pd.concat([Cancer_MarkerGE, NE_MarkerGE, T_MarkerGE, Other_Immune_MarkerGE, Stromal_MarkerGE], axis=1)
+marker_genes_expression_df_grouped.columns = ["Cancer Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells", "Stromal Cells"]
+relative_marker_genes_expression_df_grouped = marker_genes_expression_df_grouped.div(marker_genes_expression_df_grouped.sum(axis=1)+1e-8, axis=0)
+
+Total_Cancer_Celltype_proportion = Celltype_proportion_df.iloc[:,0:8].sum(axis=1)
+Total_Normal_Epith_Celltype_proportion = Celltype_proportion_df.iloc[:,8:12].sum(axis=1)
+Total_T_Celltype_proportion = Celltype_proportion_df.iloc[:,12]
+Total_Other_Immune_Celltype_proportion = Celltype_proportion_df.iloc[:,13:17].sum(axis=1)
+Total_Stromal_Celltype_proportion = Celltype_proportion_df.iloc[:,17:].sum(axis=1)
+Celltype_proportion_df_grouped = pd.concat([Total_Cancer_Celltype_proportion, Total_Normal_Epith_Celltype_proportion, Total_T_Celltype_proportion, Total_Other_Immune_Celltype_proportion, Total_Stromal_Celltype_proportion], axis=1)
+Celltype_proportion_df_grouped.columns = ["Cancer Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells", "Stromal Cells"]
+
+
+focus_celltype_percent = (Celltype_proportion_df_grouped[cell_type]*100).round(4).values.tolist()
+focus_relative_marker_genes_expression = (relative_marker_genes_expression_df_grouped[cell_type]*100).round(4).values.tolist()
+
+
+
+Spatial_location_df = pd.read_csv('CARD_Need_Files/6723_KL_1_region0_spatial.csv', index_col=0)
+showcase_df = pd.concat([pd.Series(focus_celltype_percent), pd.Series(focus_relative_marker_genes_expression), Spatial_location_df[["x", "y"]].reset_index(drop=True)], axis=1)
+showcase_df.columns = ["Proportion", "Expression", "x", "y"]
+
+
+plt.figure(figsize=(10, 8))
+ax = plt.gca()
+
+# create the scatter plot with hexagon markers
+plt.scatter(
+    x=showcase_df['x'],
+    y=showcase_df['y'],
+    c=showcase_df['Proportion'],
+    cmap='coolwarm',  # the color from light to dark
+    marker='h',  # hexagon marker
+    s=100,  # marker size
+    edgecolors='black',
+    linewidth=0.5
+)
+
+# Add colorbar
+cbar = plt.colorbar()
+cbar.set_label('Relative Markers GE (%)', fontsize=25, fontweight='bold', color='black')
+cbar.ax.tick_params(labelsize=18, colors='black', width=3)
+for label in cbar.ax.get_yticklabels():
+    label.set_fontweight('bold')
+    label.set_color('black')
+
+# Invert the y axis to match the image coordinate system
+ax.invert_yaxis()
+
+# Set all four borders as thick black lines
+ax.spines['top'].set_visible(True)
+ax.spines['right'].set_visible(True)
+ax.spines['left'].set_visible(True)
+ax.spines['bottom'].set_visible(True)
+ax.spines['top'].set_linewidth(5)
+ax.spines['right'].set_linewidth(5)
+ax.spines['left'].set_linewidth(5)
+ax.spines['bottom'].set_linewidth(5)
+ax.spines['top'].set_color('black')
+ax.spines['right'].set_color('black')
+ax.spines['left'].set_color('black')
+ax.spines['bottom'].set_color('black')
+
+# Remove title and axis labels
+plt.title('')
+plt.xlabel('')
+plt.ylabel('')
+
+# Remove ticks
+ax.set_xticks([])
+ax.set_yticks([])
+plt.savefig(f"Visual/6723_KL_1_region0_Cancer_cells_proportion.png", dpi=600, bbox_inches='tight')
+# Show the figure
+plt.show()
+
+
+# Set the figure size
+plt.figure(figsize=(10, 8))
+ax = plt.gca()
+
+# Create the scatter plot with hexagon markers
+plt.scatter(
+    x=showcase_df['x'],
+    y=showcase_df['y'],
+    c=showcase_df['Expression'],
+    cmap='coolwarm',  # the color from light to dark
+    marker='h',  # hexagon marker
+    s=100,  # marker size
+    edgecolors='black',
+    linewidth=0.5
+)
+
+# Add colorbar
+cbar = plt.colorbar()
+cbar.set_label('Relative Marker Gene Expression (%)', fontsize=25, fontweight='bold', color='black')
+cbar.ax.tick_params(labelsize=18, colors='black', width=3)
+for label in cbar.ax.get_yticklabels():
+    label.set_fontweight('bold')
+    label.set_color('black')
+
+# Invert the y axis to match the image coordinate system
+ax.invert_yaxis()
+
+# Set all four borders as thick black lines
+ax.spines['top'].set_visible(True)
+ax.spines['right'].set_visible(True)
+ax.spines['left'].set_visible(True)
+ax.spines['bottom'].set_visible(True)
+ax.spines['top'].set_linewidth(5)
+ax.spines['right'].set_linewidth(5)
+ax.spines['left'].set_linewidth(5)
+ax.spines['bottom'].set_linewidth(5)
+ax.spines['top'].set_color('black')
+ax.spines['right'].set_color('black')
+ax.spines['left'].set_color('black')
+ax.spines['bottom'].set_color('black')
+
+# Remove title and axis labels
+plt.title('')
+plt.xlabel('')
+plt.ylabel('')
+
+# Remove ticks
+ax.set_xticks([])
+ax.set_yticks([])
+
+plt.savefig(f"Visual/6723_KL_1_region0_Cancer_marker_genes_relative_expression.png", dpi=600, bbox_inches='tight')
+plt.show()
+
+
 
