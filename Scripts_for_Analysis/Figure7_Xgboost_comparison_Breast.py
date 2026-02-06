@@ -1,358 +1,381 @@
 """
-FigureS11: Cell Type Proportion Distribution Analysis
-======================================================
-Analyze cell type proportion distributions across all TCGA BRCA samples
+Figure 7: XGBoost Model Comparison (Breast cancer)
+========================================
 
-Input: All prediction CSV files from TCGA_Predictions_CSV folder
-Output:
-1. Distribution plots for each of the 5 merged cell types
-2. Violin plot comparing all 5 cell types
+This script generates comparison visualizations for breast cancer XGBoost models:
+1. MAE boxplot comparing 7 models (5 foundation models + 1 resnet50 model + 1 foundation models combined)
+2. Pearson correlation boxplot comparing 7 models  
+3. BRCA vs COAD feature importance scatter plots for UNI2-h and Virchow2
 
-Cell Type Merging (8 → 5):
-- Cancer Cells (unchanged)
-- Normal Epithelial Cells (unchanged)
-- T Cells (unchanged)
-- Stromal Cells = CAFs + Endothelial
-- pan-APC = B Cells + Myeloid + Plasma
 
 Author: Saishi Cui
-Date: December 2025
+Date: Feb 2026
 """
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import glob
+import numpy as np
+import torch
 import os
-from tqdm import tqdm
+from collections import defaultdict
+from adjustText import adjust_text
+
+# Configuration
+BRCA_RESULTS_DIR = '/BRCA_XGBoost_Results/New_common_samples'
+COAD_RESULTS_DIR = '/xgboost_prediction'
+OUTPUT_DIR = '/BRCA_XGBoost_Results/New_common_samples/Visualizations'
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+CELL_TYPES = ['Tumor', 'Stromal', 'pan_APC', 'T_cell', 'Normal_Epithelial']
+MODELS = ['ResNet50', 'Conch', 'ProvGigapath', 'UNI2h', 'Virchow', 'Virchow2', 'Combined']
+
+# Display names mapping
+MODEL_DISPLAY = {
+    'ResNet50': 'ResNet50',
+    'Conch': 'Conch',
+    'ProvGigapath': 'Prov-GigaPath',
+    'UNI2h': 'UNI2-h',
+    'Virchow': 'Virchow',
+    'Virchow2': 'Virchow2',
+    'Combined': 'Combined'
+}
+
+CELL_TYPE_DISPLAY = {
+    'Tumor': 'Tumor',
+    'Stromal': 'Stromal',
+    'pan_APC': 'pan-APC',
+    'T_cell': 'T',
+    'Normal_Epithelial': 'Normal Epithelial'
+}
+
+# Color palette (following COAD Figure4 style)
+color_palette = {
+    'ResNet50': '#FEF0DE',
+    'Conch': '#C43E96', 
+    'Prov-GigaPath': '#DEDBEE',
+    'UNI2-h': '#06948E',
+    'Virchow': '#F3CDCC',
+    'Virchow2': '#F0CF7F',
+    'Combined': '#FF6B6B'
+}
+
+# Feature importance comparison configuration
+FEATURE_IMPORTANCE_MODELS = {
+    'UNI2-h': {'brca_name': 'UNI2h', 'coad_name': 'UNI2h', 'n_features': 1536},
+    'Virchow2': {'brca_name': 'Virchow2', 'coad_name': 'Virchow2', 'n_features': 2560}
+}
+
+BRCA_THRESHOLD = 1.0  # 1.0% for BRCA (blue)
+COAD_THRESHOLD = 0.5  # 0.5% for COAD (red)
 
 
-def load_and_merge_all_predictions(predictions_dir):
-    """
-    Load all prediction CSVs, merge cell types, and concatenate into one DataFrame
+def generate_boxplots():
+    """Generate MAE and Pearson correlation boxplots"""
+    print("\n" + "="*80)
+    print("Generating Boxplots")
+    print("="*80)
     
-    Args:
-        predictions_dir (str): Directory containing prediction CSV files
+    # Collect all results
+    all_results = []
     
-    Returns:
-        pd.DataFrame: Combined DataFrame with all tiles from all samples
-    """
+    for cell_type in CELL_TYPES:
+        for model in MODELS:
+            csv_path = f"{BRCA_RESULTS_DIR}/{cell_type}_{model}_individual_level/individual_metrics_individual_level.csv"
+            
+            if not os.path.exists(csv_path):
+                print(f"Warning: {csv_path} not found")
+                continue
+            
+            df = pd.read_csv(csv_path)
+            
+            for index, row in df.iterrows():
+                all_results.append({
+                    "model_name": MODEL_DISPLAY[model],
+                    "cell_type": CELL_TYPE_DISPLAY[cell_type],
+                    "MAE": row["MAE"],
+                    "Pearson": row["Pearson"],
+                    "Individual": row["Individual"]
+                })
     
-    print(f"\n{'='*80}")
-    print(f"Loading and merging prediction CSVs")
-    print(f"{'='*80}\n")
+    df_all = pd.DataFrame(all_results)
+    print(f"Collected {len(df_all)} results")
     
-    # Find all prediction CSV files
-    csv_files = sorted(glob.glob(os.path.join(predictions_dir, "*_predictions.csv")))
-    print(f"Found {len(csv_files)} prediction CSV files\n")
+    # Define model order
+    model_order = ['ResNet50', 'Conch', 'Prov-GigaPath', 'UNI2-h', 'Virchow', 'Virchow2', 'Combined']
+    cell_type_order = ['Tumor', 'Stromal', 'pan-APC', 'T', 'Normal Epithelial']
     
-    if len(csv_files) == 0:
-        raise ValueError(f"No prediction CSV files found in {predictions_dir}")
-    
-    all_data = []
-    
-    for csv_file in tqdm(csv_files, desc="Processing CSV files"):
-        # Read CSV
-        df = pd.read_csv(csv_file)
+    # Generate both MAE and Pearson boxplots
+    for metric in ['MAE', 'Pearson']:
+        print(f"\nGenerating {metric} boxplot...")
         
-        # Extract sample name
-        sample_name = os.path.basename(csv_file).replace('_predictions.csv', '')
-        df['sample_id'] = sample_name
+        fig, ax = plt.subplots(figsize=(18, 8))
         
-        # Merge cell types
-        # Stromal = CAFs + Endothelial
-        df['Stromal Cells'] = df['Cancer-Associated Fibroblasts'] + df['Endothelial Cells']
+        # Create boxplot
+        sns.boxplot(
+            data=df_all,
+            x='cell_type',
+            y=metric,
+            hue='model_name',
+            hue_order=model_order,
+            order=cell_type_order,
+            palette=color_palette,
+            showfliers=False,
+            linewidth=3,
+            ax=ax
+        )
         
-        # pan-APC = B + Myeloid + Plasma
-        df['pan-APC'] = df['B Cells'] + df['Myeloid Cells'] + df['Plasma Cells']
+        # Add stripplot
+        sns.stripplot(
+            data=df_all,
+            x='cell_type',
+            y=metric,
+            hue='model_name',
+            hue_order=model_order,
+            order=cell_type_order,
+            palette=color_palette,
+            size=6,
+            alpha=0.7,
+            dodge=True,
+            jitter=0.3,
+            edgecolor='black',
+            linewidth=0.5,
+            ax=ax,
+            legend=False
+        )
         
-        # Keep the 5 merged cell types + sample info
-        df_merged = df[[
-            'tile_name', 'sample_id',
-            'Cancer Cells', 'Normal Epithelial Cells', 'T Cells', 
-            'Stromal Cells', 'pan-APC'
-        ]].copy()
+        # Styling
+        ax.set_xlabel('', fontsize=24, fontweight='bold')
+        ylabel = 'Mean Absolute Error (MAE)' if metric == 'MAE' else 'Pearson Correlation'
+        ax.set_ylabel(ylabel, fontsize=24, fontweight='bold')
+        ax.set_title(f'BRCA Model Comparison: {ylabel}', fontsize=26, fontweight='bold')
         
-        # Remove white tiles (NaN values)
-        df_merged = df_merged.dropna()
+        # Set y-axis limits
+        if metric == 'MAE':
+            ax.set_ylim(0, 0.4)
+        else:  # Pearson
+            ax.set_ylim(-0.5, 1.0)
         
-        all_data.append(df_merged)
-    
-    # Concatenate all samples
-    df_combined = pd.concat(all_data, ignore_index=True)
-    
-    print(f"\n✅ Data loaded and merged!")
-    print(f"   Total samples: {len(csv_files)}")
-    print(f"   Total valid tiles: {len(df_combined):,}")
-    print(f"   Tiles per sample (avg): {len(df_combined) / len(csv_files):.0f}")
-    
-    return df_combined
-
-
-def plot_cell_type_distributions(df_combined, output_dir):
-    """
-    Create distribution plots for each cell type
-    
-    Args:
-        df_combined (pd.DataFrame): Combined data from all samples
-        output_dir (str): Directory to save plots
-    """
-    
-    os.makedirs(output_dir, exist_ok=True)
-    
-    cell_types = ['Cancer Cells', 'Normal Epithelial Cells', 'T Cells', 
-                  'Stromal Cells', 'pan-APC']
-    
-    print(f"\n{'='*80}")
-    print(f"Creating distribution plots")
-    print(f"{'='*80}\n")
-    
-    for cell_type in cell_types:
-        print(f"  Plotting: {cell_type}")
+        # Tick styling
+        ax.tick_params(axis='x', rotation=15, labelsize=20, labelcolor='black', 
+                      width=2, length=6, colors='black')
+        ax.tick_params(axis='y', labelsize=20, labelcolor='black', 
+                      width=2, length=6, colors='black')
         
-        proportions = df_combined[cell_type] * 100  # Convert to percentage
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontweight('bold')
         
-        # Create figure
-        fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+        # Legend
+        handles, labels = ax.get_legend_handles_labels()
+        n_models = len(model_order)
+        ax.legend(handles[:n_models], labels[:n_models], 
+                 loc='upper right', fontsize=18, framealpha=0.9)
+        legend = ax.get_legend()
+        for text in legend.get_texts():
+            text.set_fontweight('bold')
         
-        ### Subplot 1: Histogram with KDE
-        axes[0].hist(proportions, bins=50, density=True, alpha=0.7, 
-                    color='skyblue', edgecolor='black', linewidth=1.5)
+        # Grid
+        ax.grid(True, alpha=0.3, linewidth=1)
         
-        # Add KDE
-        from scipy import stats
-        try:
-            kde = stats.gaussian_kde(proportions)
-            x_range = np.linspace(proportions.min(), proportions.max(), 200)
-            axes[0].plot(x_range, kde(x_range), 'r-', linewidth=3, label='KDE')
-        except:
-            pass
-        
-        # Add vertical lines for min and max
-        min_val = proportions.min()
-        max_val = proportions.max()
-        ymax = axes[0].get_ylim()[1]
-        
-        axes[0].axvline(min_val, color='green', linestyle='--', linewidth=2.5, 
-                       label=f'Min: {min_val:.2f}%')
-        axes[0].axvline(max_val, color='purple', linestyle='--', linewidth=2.5, 
-                       label=f'Max: {max_val:.2f}%')
-        
-        axes[0].legend(fontsize=12, loc='upper right', frameon=True, fancybox=True)
-        
-        axes[0].set_xlabel('Proportion (%)', fontsize=16, fontweight='bold')
-        axes[0].set_ylabel('Density', fontsize=16, fontweight='bold')
-        axes[0].set_title(f'{cell_type} Distribution', fontsize=18, fontweight='bold')
-        axes[0].tick_params(labelsize=14, width=2)
-        for spine in axes[0].spines.values():
-            spine.set_linewidth(2)
+        # Thick borders
+        for spine in ax.spines.values():
+            spine.set_linewidth(5)
             spine.set_color('black')
-        axes[0].grid(True, alpha=0.3)
-        
-        ### Subplot 2: Box plot with statistics
-        bp = axes[1].boxplot([proportions], widths=0.6, patch_artist=True,
-                            boxprops=dict(facecolor='lightblue', linewidth=2),
-                            medianprops=dict(color='red', linewidth=3),
-                            whiskerprops=dict(linewidth=2),
-                            capprops=dict(linewidth=2))
-        
-        # Add statistics text
-        mean_val = proportions.mean()
-        median_val = proportions.median()
-        std_val = proportions.std()
-        min_val = proportions.min()
-        max_val = proportions.max()
-        q25 = proportions.quantile(0.25)
-        q75 = proportions.quantile(0.75)
-        
-        stats_text = f'Mean: {mean_val:.2f}%\n'
-        stats_text += f'Median: {median_val:.2f}%\n'
-        stats_text += f'Std: {std_val:.2f}%\n'
-        stats_text += f'Min: {min_val:.2f}%\n'
-        stats_text += f'Max: {max_val:.2f}%\n'
-        stats_text += f'Q25: {q25:.2f}%\n'
-        stats_text += f'Q75: {q75:.2f}%\n'
-        stats_text += f'N: {len(proportions):,}'
-        
-        axes[1].text(1.3, mean_val, stats_text,
-                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
-                    fontsize=14, fontweight='bold', verticalalignment='center')
-        
-        axes[1].set_ylabel('Proportion (%)', fontsize=16, fontweight='bold')
-        axes[1].set_title(f'{cell_type} Summary', fontsize=18, fontweight='bold')
-        axes[1].set_xticks([])
-        axes[1].tick_params(labelsize=14, width=2)
-        for spine in axes[1].spines.values():
-            spine.set_linewidth(2)
-            spine.set_color('black')
-        axes[1].grid(True, alpha=0.3, axis='y')
         
         plt.tight_layout()
         
-        # Save figure
-        output_path = os.path.join(output_dir, 
-                                  f"{cell_type.replace(' ', '_')}_distribution.png")
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        plt.close()
+        # Save
+        output_path = f'{OUTPUT_DIR}/BRCA_model_comparison_{metric}_boxplot_with_Combined.png'
+        plt.savefig(output_path, dpi=600, bbox_inches='tight', facecolor='white')
+        print(f"Saved: {output_path}")
         
-        print(f"    ✅ Saved: {output_path}")
+        plt.close()
     
-    print(f"\n✅ All distribution plots saved!")
+    print("\n✅ Boxplots created successfully!")
 
 
-def plot_violin_comparison(df_combined, output_dir):
-    """
-    Create violin plot comparing all 5 cell types
+def load_feature_importance(pt_file_path, n_features):
+    """Load feature importance and compute average across folds as percentage"""
+    data = torch.load(pt_file_path, weights_only=False)
+    feature_importances = data['feature_importances']
     
-    Args:
-        df_combined (pd.DataFrame): Combined data from all samples
-        output_dir (str): Directory to save plot
-    """
+    # Aggregate importances across all folds
+    aggregated = defaultdict(list)
+    for fold_importance in feature_importances:
+        for feat, val in fold_importance.items():
+            aggregated[feat].append(val)
     
-    os.makedirs(output_dir, exist_ok=True)
+    # Compute mean importance for each feature
+    mean_importance = {}
+    for feat, vals in aggregated.items():
+        mean_importance[feat] = np.mean(vals)
     
-    print(f"\n{'='*80}")
-    print(f"Creating violin plot comparison")
-    print(f"{'='*80}\n")
+    # Fill in missing features with 0
+    for i in range(n_features):
+        feat_name = f'f{i}'
+        if feat_name not in mean_importance:
+            mean_importance[feat_name] = 0.0
     
-    cell_types = ['Cancer Cells', 'Normal Epithelial Cells', 'T Cells', 
-                  'Stromal Cells', 'pan-APC']
+    # Convert to percentage (sum to 100%)
+    total = sum(mean_importance.values())
+    if total > 0:
+        for feat in mean_importance:
+            mean_importance[feat] = (mean_importance[feat] / total) * 100
     
-    # Prepare data for violin plot (convert to long format)
-    data_long = []
-    for cell_type in cell_types:
-        proportions = df_combined[cell_type] * 100  # Convert to percentage
-        for prop in proportions:
-            data_long.append({
-                'Cell Type': cell_type,
-                'Proportion (%)': prop
-            })
+    return mean_importance
+
+
+def create_scatter_plot(brca_importance, coad_importance, model_name, n_features, output_path):
+    """Create scatter plot comparing BRCA vs COAD feature importance"""
     
-    df_long = pd.DataFrame(data_long)
+    # Prepare data
+    features = [f'f{i}' for i in range(n_features)]
+    brca_vals = np.array([brca_importance.get(f, 0) for f in features])
+    coad_vals = np.array([coad_importance.get(f, 0) for f in features])
+    
+    # Categorize features with different thresholds
+    normal_mask = (brca_vals <= BRCA_THRESHOLD) & (coad_vals <= COAD_THRESHOLD)
+    brca_high_mask = (brca_vals > BRCA_THRESHOLD) & (coad_vals <= COAD_THRESHOLD)
+    coad_high_mask = (coad_vals > COAD_THRESHOLD) & (brca_vals <= BRCA_THRESHOLD)
+    both_high_mask = (brca_vals > BRCA_THRESHOLD) & (coad_vals > COAD_THRESHOLD)
     
     # Create figure
-    fig, ax = plt.subplots(figsize=(14, 8))
+    fig, ax = plt.subplots(figsize=(10, 10))
     
-    # Define colors for each cell type
-    colors = {
-        'Cancer Cells': '#E41A1C',           # Red
-        'Stromal Cells': '#FFFF33',          # Yellow
-        'Normal Epithelial Cells': '#377EB8', # Blue
-        'T Cells': '#4DAF4A',                # Green
-        'pan-APC': '#FF7F00'                 # Orange
-    }
+    # Plot normal features (grey)
+    ax.scatter(brca_vals[normal_mask], coad_vals[normal_mask], 
+               c='grey', alpha=0.5, s=50, label='Normal features', zorder=1)
     
-    palette = [colors[ct] for ct in cell_types]
+    # Plot BRCA high features (blue) - threshold 1.0%
+    ax.scatter(brca_vals[brca_high_mask], coad_vals[brca_high_mask], 
+               c='blue', alpha=0.8, s=80, label=f'BRCA >{BRCA_THRESHOLD}%', zorder=2)
     
-    # Create violin plot
-    parts = ax.violinplot(
-        [df_combined[ct] * 100 for ct in cell_types],
-        positions=range(len(cell_types)),
-        widths=0.7,
-        showmeans=True,
-        showmedians=True,
-        showextrema=True
-    )
+    # Plot COAD high features (red) - threshold 0.5%
+    ax.scatter(brca_vals[coad_high_mask], coad_vals[coad_high_mask], 
+               c='red', alpha=0.8, s=80, label=f'COAD >{COAD_THRESHOLD}%', zorder=2)
     
-    # Color the violin plots
-    for i, pc in enumerate(parts['bodies']):
-        pc.set_facecolor(palette[i])
-        pc.set_alpha(0.7)
-        pc.set_edgecolor('black')
-        pc.set_linewidth(2)
+    # Plot both high features (purple) - using both thresholds
+    ax.scatter(brca_vals[both_high_mask], coad_vals[both_high_mask], 
+               c='purple', alpha=0.9, s=120, label=f'Both (BRCA>{BRCA_THRESHOLD}%, COAD>{COAD_THRESHOLD}%)', 
+               edgecolor='black', linewidth=1.5, zorder=3)
     
-    # Style the median, mean, and extrema lines
-    parts['cmedians'].set_edgecolor('red')
-    parts['cmedians'].set_linewidth(3)
-    parts['cmeans'].set_edgecolor('blue')
-    parts['cmeans'].set_linewidth(2)
-    parts['cbars'].set_edgecolor('black')
-    parts['cbars'].set_linewidth(2)
-    parts['cmaxes'].set_edgecolor('black')
-    parts['cmaxes'].set_linewidth(2)
-    parts['cmins'].set_edgecolor('black')
-    parts['cmins'].set_linewidth(2)
+    # Annotate features above thresholds
+    texts = []
+    for i, (brca_val, coad_val) in enumerate(zip(brca_vals, coad_vals)):
+        if brca_val > BRCA_THRESHOLD or coad_val > COAD_THRESHOLD:
+            texts.append(ax.text(brca_val, coad_val, features[i], 
+                                fontsize=18, ha='center', va='bottom'))
     
-    # Add box plots on top for quartiles
-    bp = ax.boxplot(
-        [df_combined[ct] * 100 for ct in cell_types],
-        positions=range(len(cell_types)),
-        widths=0.15,
-        patch_artist=True,
-        boxprops=dict(facecolor='white', alpha=0.5, linewidth=2),
-        medianprops=dict(color='red', linewidth=2),
-        whiskerprops=dict(linewidth=1.5, linestyle='--'),
-        capprops=dict(linewidth=1.5),
-        showfliers=False
-    )
+    # Adjust text to avoid overlap (no arrows)
+    if texts:
+        adjust_text(texts, ax=ax)
     
-    # Set labels and title
-    ax.set_xticks(range(len(cell_types)))
-    ax.set_xticklabels(cell_types, rotation=45, ha='right', 
-                       fontsize=14, fontweight='bold')
-    ax.set_ylabel('Cell Type Proportion (%)', fontsize=18, fontweight='bold')
-    ax.set_title('Cell Type Proportion Distribution Across All Samples', 
-                fontsize=20, fontweight='bold', pad=20)
+    # Diagonal line y=x
+    max_val = max(brca_vals.max(), coad_vals.max())
+    ax.plot([0, max_val], [0, max_val], 'k--', alpha=0.5, linewidth=2, label='y=x', zorder=0)
     
-    # Style the axes
-    ax.tick_params(labelsize=14, width=2)
+    # Styling
+    ax.set_xlabel('Breast Tumor Cells Feature Importance (%)', fontsize=22, fontweight='bold')
+    ax.set_ylabel('Colorectal Tumor Cells Feature Importance (%)', fontsize=22, fontweight='bold')
+    ax.set_title(f'Feature Importance: BRCA vs COAD ({model_name})', 
+                fontsize=24, fontweight='bold')
+    
+    # Tick styling
+    ax.tick_params(axis='both', which='major', labelsize=20, width=2, length=6)
+    for label in ax.get_xticklabels() + ax.get_yticklabels():
+        label.set_fontweight('bold')
+        label.set_fontsize(20)
+    
+    # Add legend with bold font
+    legend = ax.legend(loc='upper right', fontsize=18, framealpha=0.9)
+    for text in legend.get_texts():
+        text.set_fontweight('bold')
+    
+    # Add grid
+    ax.grid(True, alpha=0.3, linestyle='--')
+    
+    # Thick borders
     for spine in ax.spines.values():
-        spine.set_linewidth(3)
+        spine.set_linewidth(2)
         spine.set_color('black')
-    ax.grid(True, alpha=0.3, axis='y')
-    
-    # Add legend for median and mean
-    from matplotlib.lines import Line2D
-    legend_elements = [
-        Line2D([0], [0], color='red', linewidth=3, label='Median'),
-        Line2D([0], [0], color='blue', linewidth=2, label='Mean')
-    ]
-    ax.legend(handles=legend_elements, loc='upper right', fontsize=14, 
-             frameon=True, fancybox=True, shadow=True)
     
     plt.tight_layout()
-    
-    # Save figure
-    output_path = os.path.join(output_dir, "Cell_Type_Violin_Comparison.png")
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=600, bbox_inches='tight', facecolor='white')
     plt.close()
     
-    print(f"✅ Violin plot saved: {output_path}\n")
+    print(f"  Saved: {output_path}")
     
-    # Print summary statistics
-    print(f"Summary Statistics:")
-    print(f"{'='*80}")
-    for cell_type in cell_types:
-        proportions = df_combined[cell_type] * 100
-        print(f"\n{cell_type}:")
-        print(f"  Mean:   {proportions.mean():.2f}%")
-        print(f"  Median: {proportions.median():.2f}%")
-        print(f"  Std:    {proportions.std():.2f}%")
-        print(f"  Min:    {proportions.min():.2f}%")
-        print(f"  Max:    {proportions.max():.2f}%")
-        print(f"  Q25:    {proportions.quantile(0.25):.2f}%")
-        print(f"  Q75:    {proportions.quantile(0.75):.2f}%")
+    # Print statistics
+    print(f"  Statistics for {model_name}:")
+    print(f"    Normal features: {np.sum(normal_mask)}")
+    print(f"    BRCA >{BRCA_THRESHOLD}%: {np.sum(brca_high_mask)}")
+    print(f"    COAD >{COAD_THRESHOLD}%: {np.sum(coad_high_mask)}")
+    print(f"    Both (BRCA>{BRCA_THRESHOLD}%, COAD>{COAD_THRESHOLD}%): {np.sum(both_high_mask)}")
 
 
-### Main execution
+def generate_feature_importance_scatter():
+    """Generate BRCA vs COAD feature importance scatter plots"""
+    print("\n" + "="*80)
+    print("BRCA vs COAD Feature Importance Comparison")
+    print("="*80)
+    
+    for model_display_name, config in FEATURE_IMPORTANCE_MODELS.items():
+        print(f"\nProcessing {model_display_name}...")
+        
+        # Paths
+        brca_pt = f"{BRCA_RESULTS_DIR}/Tumor_{config['brca_name']}_individual_level/xgboost_results_individual_level.pt"
+        coad_pt = f"{COAD_RESULTS_DIR}/Cancer Cells_{config['coad_name']}_individual_level_ratio100/xgboost_results_individual_level.pt"
+        
+        # Check files exist
+        if not os.path.exists(brca_pt):
+            print(f"  Warning: BRCA file not found: {brca_pt}")
+            continue
+        if not os.path.exists(coad_pt):
+            print(f"  Warning: COAD file not found: {coad_pt}")
+            continue
+        
+        # Load feature importances
+        print(f"  Loading BRCA importance...")
+        brca_importance = load_feature_importance(brca_pt, config['n_features'])
+        
+        print(f"  Loading COAD importance...")
+        coad_importance = load_feature_importance(coad_pt, config['n_features'])
+        
+        # Create scatter plot
+        filename_safe = model_display_name.replace('-', '_')
+        output_path = f"{OUTPUT_DIR}/BRCA_vs_COAD_{filename_safe}_feature_importance.png"
+        create_scatter_plot(brca_importance, coad_importance, model_display_name, 
+                           config['n_features'], output_path)
+    
+    print("\n" + "="*80)
+    print("✅ Scatter plots created!")
+    print("="*80)
+
+
+def main():
+    """Main execution"""
+    print("="*80)
+    print("Figure 7: BRCA XGBoost Model Comparison")
+    print("="*80)
+    print(f"\nOutput directory: {OUTPUT_DIR}\n")
+    
+    # Generate boxplots
+    generate_boxplots()
+    
+    # Generate feature importance scatter plots
+    generate_feature_importance_scatter()
+    
+    print("\n" + "="*80)
+    print("✅ All visualizations complete!")
+    print("="*80)
+    print(f"\nGenerated files:")
+    print(f"  1. BRCA_model_comparison_MAE_boxplot_with_Combined.png")
+    print(f"  2. BRCA_model_comparison_Pearson_boxplot_with_Combined.png")
+    print(f"  3. BRCA_vs_COAD_UNI2_h_feature_importance.png")
+    print(f"  4. BRCA_vs_COAD_Virchow2_feature_importance.png")
+    print(f"\nAll files saved to: {OUTPUT_DIR}\n")
+
+
 if __name__ == "__main__":
-    
-    ### Configuration
-    PREDICTIONS_DIR = "/Users/scui2/Desktop/TCGA_Predictions_CSV"
-    OUTPUT_DIR = "/Users/scui2/Desktop/TCGA_Cell_Type_Distributions"
-    
-    ### Step 1: Load and merge all prediction CSVs
-    df_combined = load_and_merge_all_predictions(PREDICTIONS_DIR)
-    
-    ### Step 2: Create distribution plots for each cell type
-    plot_cell_type_distributions(df_combined, OUTPUT_DIR)
-    
-    ### Step 3: Create violin plot comparing all cell types
-    plot_violin_comparison(df_combined, OUTPUT_DIR)
-    
-    print(f"\n{'#'*80}")
-    print(f"✅ Analysis Complete!")
-    print(f"All plots saved to: {OUTPUT_DIR}")
-    print(f"{'#'*80}\n")
-
+    main()
