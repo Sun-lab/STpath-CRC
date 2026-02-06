@@ -2,14 +2,12 @@
 STPath-COAD: UMAP Analysis with Contribution Regression for Figure 3
 ====================================================================
 
-This script performs UMAP dimensionality reduction analysis with regression of 
-confounding factors for Figure 3. Visualizes feature contributions and corrected embeddings.
+This script performs feature representation, predicting models’ comparison, efficiency, and complementarity across pathology foundation models,
+to generate plots for Figure 3 panel A-D
 
 Author: Saishi Cui
-Date: December 2025
+Date: Feb 2026
 
-Purpose: Generate UMAP visualizations with contribution analysis, regression corrections,
-and comprehensive feature space analysis for Figure 3 (also Figure S5-S8) of the paper.
 """
 
 import torch
