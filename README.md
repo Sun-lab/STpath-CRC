@@ -8,7 +8,7 @@ This repository contains the complete analysis pipeline and scripts for the STPa
 
 ## Key Features
 
-- **Multi-modal Foundation Models**: Integration of 5 state-of-the-art histopathology foundation models (Conch, UNI2-h, ProvGigaPath, Virchow, Virchow2) and 1 baseline model (ResNet50)
+- **Multi-modal Foundation Models**: Integration of 5 state-of-the-art histopathology foundation models (Conch, UNI2-h, ProvGigaPath, Virchow, Virchow2) and 1 baseline model (ResNet50).
 - **Cell Type Deconvolution**: Spatial transcriptomics-guided cell type prediction for 5 major cell populations
 - **TCGA Analysis**: Comprehensive survival analysis and clinical correlation studies
 - **Cross-validation Framework**: Leave-one-individual-out (LOIO) validation strategy
@@ -184,42 +184,6 @@ cp config_template.yaml config.yaml
 
 Edit paths and parameters according to your data location and computing resources.
 
-### 3. Running the Analysis
-
-#### Complete Workflow
-```bash
-# Step A: Data preparation
-python Workflow/StepA_Data_Preparation/CARD_STData_Preparation_Cody.py
-
-# Step B: Cell type deconvolution (in R)
-Rscript Workflow/StepB_Cell_Type_Deconvolution/CARD_Deconvolution_Cody.R
-
-# Step C: Feature extraction and model training
-python Workflow/StepC_Feature_Extraction_and_Train_Models/Precompute_Features_Using_Foundation_Models_COAD.py
-python Workflow/StepC_Feature_Extraction_and_Train_Models/COAD_XGBoost_Prediction.py
-
-# Step D: TCGA analysis
-python Workflow/StepD_TCGA_Data_Preparation/TCGA_COAD_DCM_to_TIFF.py
-python Scripts_for_Analysis/FigureS7_TCGA_COAD_Analysis.py
-python Scripts_for_Analysis/Figure7_TCGA_COAD_Survival.py
-```
-
-#### Generate Manuscript Figures
-```bash
-# Main figures
-python Scripts_for_Analysis/Figure2_scRNAseq_data_analysis.py
-python Scripts_for_Analysis/Figure3_UMAP_Contri_RegressOut.py
-python Scripts_for_Analysis/Figure4_Xgboost_comparison.py
-python Scripts_for_Analysis/Figure5_Consistency.py
-python Scripts_for_Analysis/Figure6_Soft_Segmentation.py
-python Scripts_for_Analysis/Figure7_TCGA_COAD_Survival.py
-
-# Supplementary figures and tables
-python Scripts_for_Analysis/FigureS7_TCGA_COAD_Analysis.py
-python Scripts_for_Analysis/FigureS10_expression_prediction.py
-python Scripts_for_Analysis/FigureS11_Cell_Type_Distribution_Analysis.py
-python Scripts_for_Analysis/Table1_TCGA.py
-```
 
 ## Key Analyses
 
@@ -287,16 +251,10 @@ python Scripts_for_Analysis/Table1_TCGA.py
 - **Mean Absolute Error (MAE)**: Absolute prediction error
 - **Root Mean Squared Error (RMSE)**: Squared error magnitude
 
-### Typical Performance (LOIO validation)
-- Cancer Cells: ρ = 0.75-0.85
-- Stromal Cells: ρ = 0.70-0.80
-- T Cells: ρ = 0.60-0.70
-- Other cell types: ρ = 0.55-0.70
-
 ## Computational Resources
 
 ### Processing Time
-- **Feature Extraction**: ~2-5 minutes per WSI (GPU)
+- **Feature Extraction**: ~2-5 minutes per WSI per foundation model (GPU)
 - **Model Training**: ~30-60 minutes per cell type (LOIO)
 - **Prediction**: ~1-3 minutes per WSI
 - **TCGA Analysis**: ~10-20 minutes per sample
@@ -316,8 +274,8 @@ If you use this code in your research, please cite:
 
 ## Related Repositories
 
-- **STPath-Software**: Standalone prediction tool for clinical use (separate repository)
-- **BRCA Analysis**: Breast cancer application scripts (see `/Users/scui2/Desktop/BRCA_github/`)
+- **STPath-Software**: Standalone prediction tool for clinical use (https://github.com/Sun-lab/STpath-software)
+- **BRCA Analysis**: Breast cancer application scripts (https://github.com/Sun-lab/STpath-BRCA)
 
 ## License
 
@@ -336,4 +294,4 @@ For questions, issues, or collaborations, please open an issue on GitHub or cont
 
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: Feb 2026
