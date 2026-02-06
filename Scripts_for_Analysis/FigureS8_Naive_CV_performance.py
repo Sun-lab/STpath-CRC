@@ -1,5 +1,5 @@
 """
-STPath-COAD: Within-Sample XGBoost Model Training and Evaluation (Naive cross-validation) for Figure S8.
+Figure S8: Within-Sample XGBoost Model Training and Evaluation (Naive cross-validation).
 ===============================================================
 
 This script trains XGBoost models for predicting cell type proportions in colorectal cancer
@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 def train_xgboost_within_sample(
-    input_dir='/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features',
+    input_dir='/Training_features',
     cell_type="Cancer Cells",
     model_name='UNI2h',
     params=None,
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     results_df = results_df[['Model', 'Cell_Type', 'Pearson_Correlation', 'MAE', 'n_train', 'n_test']]
 
     # Create output directory
-    output_dir = '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction/WithinSample_Results'
+    output_dir = '/xgboost_prediction/WithinSample_Results'
     os.makedirs(output_dir, exist_ok=True)
 
     # Save results
