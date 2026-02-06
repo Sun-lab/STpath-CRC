@@ -3,7 +3,7 @@ STPath-COAD: Single-cell RNA-seq Data Analysis for Figure 2
 ==========================================================
 
 This script shows the results of single-cell data anlysis for colorectal cancer, cell type deconvolution and validation,
-to generate plots for Figure 2 Panel A-E.
+to generate plots for Figure 2 panel A-E.
 
 Author: Saishi Cui
 Date: Feb 2026
