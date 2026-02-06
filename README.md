@@ -8,7 +8,7 @@ This repository contains the complete analysis pipeline and scripts for the STPa
 
 ## Key Features
 
-- **Multi-modal Foundation Models**: Integration of 6 state-of-the-art histopathology foundation models (ResNet50, Conch, UNI2-h, ProvGigaPath, Virchow, Virchow2)
+- **Multi-modal Foundation Models**: Integration of 5 state-of-the-art histopathology foundation models (Conch, UNI2-h, ProvGigaPath, Virchow, Virchow2) and 1 baseline model (ResNet50)
 - **Cell Type Deconvolution**: Spatial transcriptomics-guided cell type prediction for 5 major cell populations
 - **TCGA Analysis**: Comprehensive survival analysis and clinical correlation studies
 - **Cross-validation Framework**: Leave-one-individual-out (LOIO) validation strategy
