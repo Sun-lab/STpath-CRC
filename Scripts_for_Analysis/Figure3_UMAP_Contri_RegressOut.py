@@ -22,11 +22,19 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score
+import time
+import json
+from sklearn.linear_model import Lasso
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
+import xgboost as xgb
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
 
 
 
-
-### (A) Original UMAP Visualization (with all features)
+### Figure 3 (Panel A) Original UMAP Visualization (with all features)
 def create_umap_visualizations(data_path, cell_type, foundation_model, legend_on = False, save_dir="Visual/UMAPs/"):
     """
     Create UMAP dimensionality reduction visualization, generating three differently colored plots
@@ -209,13 +217,13 @@ for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T
 
 
 for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T Cells", "Other Immune Cells"]:     
-    create_umap_visualizations(data_path = f"Colorectal_Cancer_HE_patches/Training_features/{cell_type}_training_precomputed_features_UNI2h.pt", cell_type = cell_type, foundation_model = "UNI2-h", legend_on = True, save_dir="Colorectal_Cancer_HE_patches/Visual/UMAPs_legend/")
+    create_umap_visualizations(data_path = f"/Training_features/{cell_type}_training_precomputed_features_UNI2h.pt", cell_type = cell_type, foundation_model = "UNI2-h", legend_on = True, save_dir="Colorectal_Cancer_HE_patches/Visual/UMAPs_legend/")
 
 
 
 
 
-##  (A) UMAP Visualization (with top 10 features)
+##  Figure 3 (Panel A) UMAP Visualization (with top 10 features)
 def create_umap_visualizations_Xgboost(foundation_model, cell_type, if_legend = True, dpi = 600):
 
 
@@ -394,23 +402,16 @@ for cell_type in ["Cancer Cells", "Stromal Cells", "Normal Epithelial Cells", "T
 
 
 
-
-
-
-
-
-
-
 ## UNI2h_data, Virchow_data, Virchow2_data, ProvGigapath_data, Conch_data,
 ## 1536 + 2560 + 2560 + 1536 + 512
 
 
 
-### (B) Create barplot of feature importance contribution to the combined model
+### Figure 3 (Panel B) Create barplot of feature importance contribution to the combined model
 def Feature_Importance_Xgboost_Barplot(cell_type):
 
 
-    result_dir = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction/{cell_type}_Combined_individual_level_ratio100/xgboost_results_individual_level.pt"
+    result_dir = f"/xgboost_prediction/{cell_type}_Combined_individual_level_ratio100/xgboost_results_individual_level.pt"
     result_data = torch.load(result_dir)
 
 
@@ -525,7 +526,7 @@ def Feature_Importance_Xgboost_Barplot(cell_type):
     ax.spines['left'].set_color('black')
 
     plt.tight_layout()
-    plt.savefig(f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/Barplot_Model_Contribution_{cell_type}.png", dpi=600, bbox_inches='tight')
+    plt.savefig(f"/Visual/Barplot_Model_Contribution_{cell_type}.png", dpi=600, bbox_inches='tight')
     plt.close()
 
     return feature_importance_df
@@ -539,9 +540,547 @@ T_cells_feature_importance_df = Feature_Importance_Xgboost_Barplot(cell_type = "
 Other_Immune_cells_feature_importance_df = Feature_Importance_Xgboost_Barplot(cell_type = "Other Immune Cells")
 
 
+##### Figure 3 (Panel C) Comparison of predictive performance and computational efficiency across multiple machine learning methods.
 
 
-##### (C) Regress out among 5 models (Conch, ProvGigapath, UNI2h, Virchow, Virchow2)
+
+# Data paths
+XGBOOST_BASE = "/xgboost_prediction"
+MODEL_COMPARISON_BASE = "/model_comparison"
+
+# Output path
+OUTPUT_DIR = "/Visual"
+
+# Cell types to compare
+CELL_TYPES = ["Cancer Cells", "Stromal Cells"]
+
+# ML Models to compare (order: MLP, Lasso, RandomForest, XGBoost)
+ML_MODELS = ["MLP", "Lasso", "RandomForest", "XGBoost"]
+
+# Color palette for ML models (distinct colors)
+ml_color_palette = {
+    'MLP': '#96CEB4',        # Sage green
+    'Lasso': '#4ECDC4',      # Teal
+    'RandomForest': '#45B7D1',  # Sky blue
+    'XGBoost': '#FF6B6B'     # Red
+}
+
+def load_individual_metrics():
+    """Load and filter individual metrics from all models."""
+    all_results = []
+    
+    for cell_type in CELL_TYPES:
+        for ml_model in ML_MODELS:
+            # Build path based on model type
+            if ml_model == "XGBoost":
+                # XGBoost uses ratio100 suffix
+                csv_path = f"{XGBOOST_BASE}/{cell_type}_Virchow2_individual_level_ratio100/individual_metrics_individual_level.csv"
+            else:
+                # Other models in model_comparison folder
+                csv_path = f"{MODEL_COMPARISON_BASE}/{ml_model}/{cell_type}_Virchow2_individual_level/individual_metrics_individual_level.csv"
+            
+            try:
+                df = pd.read_csv(csv_path)
+                print(f"Loaded {ml_model} - {cell_type}: {len(df)} rows")
+                
+                # Apply Figure 4 Panel A filtering criteria
+                for index, row in df.iterrows():
+                    ct_range = row["Max_celltype_proportion"] - row["Min_celltype_proportion"]
+                    
+                    # Filtering: n_test_samples >= 200 and ct_range > 0.3
+                    if row["n_test_samples"] >= 200 and ct_range > 0.3:
+                        all_results.append({
+                            "ml_model": ml_model,
+                            "cell_type": cell_type,
+                            "MAE": row["MAE"],
+                            "Pearson_correlation": row["Pearson"],
+                            "n_test_samples": row["n_test_samples"],
+                            "Max_celltype_proportion": row["Max_celltype_proportion"],
+                            "Min_celltype_proportion": row["Min_celltype_proportion"],
+                            "ct_range": ct_range,
+                            "Individual": row["Individual"]
+                        })
+            except FileNotFoundError:
+                print(f"Warning: File not found: {csv_path}")
+            except Exception as e:
+                print(f"Error loading {csv_path}: {e}")
+    
+    return pd.DataFrame(all_results)
+
+
+def create_boxplots(final_df):
+    """Create boxplots comparing ML models."""
+    
+    # Set the figure style
+    plt.style.use('default')
+    
+    # Define the metrics to plot
+    metrics = ['MAE', 'Pearson_correlation']
+    metric_titles = ['Mean Absolute Error (MAE)', 'Pearson Correlation']
+    
+    # Define ML model order (MLP, Lasso, RandomForest, XGBoost)
+    ml_model_order = ['MLP', 'Lasso', 'RandomForest', 'XGBoost']
+    
+    for i, (metric, title) in enumerate(zip(metrics, metric_titles)):
+        # Create figure
+        fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+        
+        # Debug: Check data for current metric
+        print(f"\nDEBUG - {metric} data check:")
+        for cell_type in CELL_TYPES:
+            cell_data = final_df[final_df['cell_type'] == cell_type]
+            print(f"{cell_type}: {len(cell_data)} samples")
+            if len(cell_data) > 0:
+                print(f"  {metric} range: {cell_data[metric].min():.3f} - {cell_data[metric].max():.3f}")
+        
+        # Create boxplot
+        box_plot = sns.boxplot(
+            data=final_df,
+            x='cell_type',
+            y=metric,
+            hue='ml_model',
+            hue_order=ml_model_order,
+            palette=ml_color_palette,
+            ax=ax,
+            showfliers=False,
+            linewidth=3,
+            legend=False
+        )
+        
+        # Add stripplot for individual points
+        sns.stripplot(
+            data=final_df,
+            x='cell_type',
+            y=metric,
+            hue='ml_model',
+            hue_order=ml_model_order,
+            palette=ml_color_palette,
+            ax=ax,
+            size=6,
+            alpha=0.7,
+            dodge=True,
+            jitter=0.3,
+            edgecolor='black',
+            linewidth=0.5,
+            legend=False
+        )
+        
+        # Set labels
+        ax.set_xlabel('')
+        ax.set_ylabel(title, fontsize=22, fontweight='bold')
+        
+        # Set tick label style
+        ax.tick_params(axis='x', rotation=0, labelsize=20, labelcolor='black',
+                       width=2, length=6, colors='black')
+        ax.tick_params(axis='y', labelsize=20, labelcolor='black',
+                       width=2, length=6, colors='black')
+        
+        # Modify x-axis labels
+        x_labels = []
+        for label in ax.get_xticklabels():
+            text = label.get_text().replace(' Cells', '')
+            text = text.replace('Cancer', 'Tumor')
+            x_labels.append(text)
+            label.set_fontweight('bold')
+        ax.set_xticklabels(x_labels, fontweight='bold')
+        
+        for label in ax.get_yticklabels():
+            label.set_fontweight('bold')
+        
+        # Set y-axis range (0 to 1 for both)
+        ax.set_ylim(0, 1)
+        
+        # Add grid
+        ax.grid(True, alpha=0.7, linestyle='--', linewidth=2, axis='y')
+        
+        # Add thick black borders
+        for spine in ['top', 'right', 'bottom', 'left']:
+            ax.spines[spine].set_linewidth(5)
+            ax.spines[spine].set_color('black')
+        
+        # Create legend on the right side (no title)
+        handles = [plt.Rectangle((0, 0), 1, 1, facecolor=ml_color_palette[m], 
+                                   edgecolor='black', linewidth=1.5)
+                   for m in ml_model_order]
+        legend = ax.legend(handles, ml_model_order,
+                          loc='center left',
+                          bbox_to_anchor=(1.02, 0.5),
+                          fontsize=16,
+                          frameon=True,
+                          edgecolor='black')
+        for text in legend.get_texts():
+            text.set_fontweight('bold')
+        
+        # Adjust layout
+        plt.tight_layout()
+        
+        # Save figure
+        output_path = f'{OUTPUT_DIR}/ML_model_comparison_{metric}_boxplot.png'
+        plt.savefig(output_path, dpi=600, bbox_inches='tight', facecolor='white')
+        print(f"Saved: {output_path}")
+        
+        plt.close()
+
+
+def create_summary_table(final_df):
+    """Create summary statistics table."""
+    summary = final_df.groupby(['cell_type', 'ml_model']).agg({
+        'MAE': ['mean', 'std'],
+        'Pearson_correlation': ['mean', 'std']
+    }).round(4)
+    
+    summary.columns = ['MAE_mean', 'MAE_std', 'Pearson_mean', 'Pearson_std']
+    summary = summary.reset_index()
+    
+    print("\n=== Summary Statistics ===")
+    print(summary.to_string(index=False))
+    
+    # Save summary
+    summary.to_csv(f'{OUTPUT_DIR}/ML_model_comparison_summary.csv', index=False)
+    
+    return summary
+
+
+
+print("Loading individual metrics...")
+final_df = load_individual_metrics()
+
+print(f"\nTotal filtered samples: {len(final_df)}")
+print(f"Unique individuals: {final_df['Individual'].nunique()}")
+
+# Create boxplots
+print("\nCreating boxplots...")
+create_boxplots(final_df)
+
+# Create summary table
+summary = create_summary_table(final_df)
+
+print("\n=== Done ===")
+
+
+
+
+# (Panel C right) 
+FEATURES_DIR = "/Training_features"
+OUTPUT_DIR = "/Visual"
+CELL_TYPE = "Cancer Cells"
+MODEL_NAME = "Virchow2"
+
+# Number of LOO iterations to benchmark
+N_BENCHMARK_FOLDS = 3
+
+# Subsample ratio for benchmarking (to speed up)
+SUBSAMPLE_RATIO = 0.1  # Use 10% of data for benchmarking
+
+# Best params from grid search
+LASSO_PARAMS = {
+    'alpha': 7.196856730011514e-05, 
+    'max_iter': 10000, 
+    'tol': 0.0001, 
+    'selection': 'cyclic'
+}
+
+RF_PARAMS = {
+    'max_depth': None, 
+    'max_features': 0.2, 
+    'min_samples_leaf': 4, 
+    'min_samples_split': 10, 
+    'n_estimators': 300,
+    'n_jobs': -1,
+    'random_state': 42
+}
+
+MLP_PARAMS = {
+    'batch_size': 256, 
+    'dropout_rate': 0.2, 
+    'hidden_dims': [512, 256], 
+    'learning_rate': 0.0001,
+    'epochs': 50
+}
+
+
+class MLPRegressor(nn.Module):
+    """Simple MLP for regression."""
+    def __init__(self, input_dim, hidden_dims=[512, 256], dropout=0.2):
+        super().__init__()
+        layers = []
+        prev_dim = input_dim
+        for h_dim in hidden_dims:
+            layers.extend([
+                nn.Linear(prev_dim, h_dim),
+                nn.ReLU(),
+                nn.Dropout(dropout)
+            ])
+            prev_dim = h_dim
+        layers.append(nn.Linear(prev_dim, 1))
+        self.network = nn.Sequential(*layers)
+    
+    def forward(self, x):
+        return self.network(x).squeeze()
+
+
+def load_data():
+    """Load features and labels with optional subsampling."""
+    pt_file = f"{FEATURES_DIR}/{CELL_TYPE}_training_precomputed_features_{MODEL_NAME}.pt"
+    data = torch.load(pt_file, weights_only=False)
+    
+    features = data['embeddings'].numpy()
+    labels = data['celltype_proportions'].numpy()
+    individual_ids = np.array(data['individual_ids'])
+    
+    # Subsample for faster benchmarking (maintain individual structure)
+    if SUBSAMPLE_RATIO < 1.0:
+        np.random.seed(42)
+        unique_inds = np.unique(individual_ids)
+        keep_mask = np.zeros(len(features), dtype=bool)
+        
+        for ind in unique_inds:
+            ind_mask = individual_ids == ind
+            ind_indices = np.where(ind_mask)[0]
+            n_keep = max(1, int(len(ind_indices) * SUBSAMPLE_RATIO))
+            keep_indices = np.random.choice(ind_indices, size=n_keep, replace=False)
+            keep_mask[keep_indices] = True
+        
+        features = features[keep_mask]
+        labels = labels[keep_mask]
+        individual_ids = individual_ids[keep_mask]
+    
+    return features, labels, individual_ids
+
+
+def train_lasso(X_train, y_train, X_test):
+    """Train Lasso model with best params."""
+    # Standardize features
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    # Use best params
+    model = Lasso(**LASSO_PARAMS)
+    model.fit(X_train_scaled, y_train)
+    return model.predict(X_test_scaled)
+
+
+def train_rf(X_train, y_train, X_test):
+    """Train Random Forest model with best params."""
+    model = RandomForestRegressor(**RF_PARAMS)
+    model.fit(X_train, y_train)
+    return model.predict(X_test)
+
+
+def train_xgboost(X_train, y_train, X_test):
+    """Train XGBoost model."""
+    dtrain = xgb.DMatrix(X_train, label=y_train)
+    dtest = xgb.DMatrix(X_test)
+    
+    params = {
+        'objective': 'reg:squarederror',
+        'max_depth': 6,
+        'learning_rate': 0.1,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'random_state': 42,
+        'verbosity': 0
+    }
+    
+    model = xgb.train(params, dtrain, num_boost_round=100)
+    return model.predict(dtest)
+
+
+def train_mlp(X_train, y_train, X_test):
+    """Train MLP model with best params."""
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+    
+    # Convert to tensors
+    X_train_t = torch.FloatTensor(X_train).to(device)
+    y_train_t = torch.FloatTensor(y_train).to(device)
+    X_test_t = torch.FloatTensor(X_test).to(device)
+    
+    # Create dataloader
+    dataset = TensorDataset(X_train_t, y_train_t)
+    dataloader = DataLoader(dataset, batch_size=MLP_PARAMS['batch_size'], shuffle=True)
+    
+    # Create model with best params
+    model = MLPRegressor(
+        X_train.shape[1], 
+        hidden_dims=MLP_PARAMS['hidden_dims'],
+        dropout=MLP_PARAMS['dropout_rate']
+    ).to(device)
+    
+    optimizer = optim.Adam(model.parameters(), lr=MLP_PARAMS['learning_rate'])
+    criterion = nn.MSELoss()
+    
+    # Train
+    model.train()
+    for epoch in range(MLP_PARAMS['epochs']):
+        for batch_X, batch_y in dataloader:
+            optimizer.zero_grad()
+            pred = model(batch_X)
+            loss = criterion(pred, batch_y)
+            loss.backward()
+            optimizer.step()
+    
+    # Predict
+    model.eval()
+    with torch.no_grad():
+        predictions = model(X_test_t).cpu().numpy()
+    
+    return predictions
+
+
+def benchmark_models():
+    """Run benchmark for all models."""
+    print("Loading data...")
+    features, labels, individual_ids = load_data()
+    unique_individuals = np.unique(individual_ids)
+    
+    print(f"Dataset: {len(features)} samples, {len(unique_individuals)} individuals")
+    print(f"Benchmarking {N_BENCHMARK_FOLDS} LOO folds...")
+    print(f"\nUsing best params from grid search (no hyperparameter tuning)")
+    
+    # Store times
+    times = {
+        'Lasso': [],
+        'RandomForest': [],
+        'XGBoost': [],
+        'MLP': []
+    }
+    
+    # Benchmark each fold
+    for fold_idx, test_individual in enumerate(unique_individuals[:N_BENCHMARK_FOLDS]):
+        print(f"\nFold {fold_idx + 1}/{N_BENCHMARK_FOLDS}: Leave {test_individual} out")
+        
+        # Split data
+        test_mask = individual_ids == test_individual
+        train_mask = ~test_mask
+        
+        X_train = features[train_mask]
+        y_train = labels[train_mask]
+        X_test = features[test_mask]
+        
+        print(f"  Train: {len(X_train)}, Test: {len(X_test)}")
+        
+        # Benchmark Lasso
+        print("  Training Lasso...", end=" ", flush=True)
+        start = time.time()
+        train_lasso(X_train, y_train, X_test)
+        lasso_time = time.time() - start
+        times['Lasso'].append(lasso_time)
+        print(f"{lasso_time:.2f}s")
+        
+        # Benchmark RandomForest
+        print("  Training RandomForest...", end=" ", flush=True)
+        start = time.time()
+        train_rf(X_train, y_train, X_test)
+        rf_time = time.time() - start
+        times['RandomForest'].append(rf_time)
+        print(f"{rf_time:.2f}s")
+        
+        # Benchmark XGBoost
+        print("  Training XGBoost...", end=" ", flush=True)
+        start = time.time()
+        train_xgboost(X_train, y_train, X_test)
+        xgb_time = time.time() - start
+        times['XGBoost'].append(xgb_time)
+        print(f"{xgb_time:.2f}s")
+        
+        # Benchmark MLP
+        print("  Training MLP...", end=" ", flush=True)
+        start = time.time()
+        train_mlp(X_train, y_train, X_test)
+        mlp_time = time.time() - start
+        times['MLP'].append(mlp_time)
+        print(f"{mlp_time:.2f}s")
+    
+    return times
+
+
+def save_times(times):
+    """Save timing data to JSON."""
+    # Save raw times
+    output_path = f'{OUTPUT_DIR}/ML_model_training_times.json'
+    with open(output_path, 'w') as f:
+        json.dump(times, f, indent=2)
+    print(f"\nSaved timing data: {output_path}")
+    
+    # Print summary
+    models = ['MLP', 'Lasso', 'RandomForest', 'XGBoost']
+    print("\n" + "="*50)
+    print("Training Time Summary (seconds per LOO fold):")
+    print("="*50)
+    for m in models:
+        print(f"  {m}: {np.mean(times[m]):.2f} ± {np.std(times[m]):.2f}")
+
+
+def create_barplot(times):
+    """Create barplot comparing training times."""
+    # Calculate mean and std
+    models = ['MLP', 'Lasso', 'RandomForest', 'XGBoost']
+    means = [np.mean(times[m]) for m in models]
+    stds = [np.std(times[m]) for m in models]
+    
+    # Colors matching ML model comparison plot
+    colors = ['#96CEB4', '#4ECDC4', '#45B7D1', '#FF6B6B']
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    x = np.arange(len(models))
+    bars = ax.bar(x, means, yerr=stds, capsize=5, color=colors, 
+                  edgecolor='black', linewidth=2)
+    
+    # Add value labels on bars
+    for bar, mean, std in zip(bars, means, stds):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + std + max(means)*0.02,
+                f'{mean:.1f}s', ha='center', va='bottom', 
+                fontsize=14, fontweight='bold')
+    
+    # Set labels
+    ax.set_xlabel('')
+    ax.set_ylabel(f'Training Time per LOO Fold (seconds)\n(10% data, ~7,800 tiles)', fontsize=16, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(models, fontsize=16, fontweight='bold')
+    
+    # Style
+    ax.tick_params(axis='y', labelsize=14)
+    for label in ax.get_yticklabels():
+        label.set_fontweight('bold')
+    
+    # Grid
+    ax.grid(True, alpha=0.7, linestyle='--', linewidth=2, axis='y')
+    
+    # Borders
+    for spine in ['top', 'right', 'bottom', 'left']:
+        ax.spines[spine].set_linewidth(3)
+        ax.spines[spine].set_color('black')
+    
+    # Set y limit
+    ax.set_ylim(0, max(means) * 1.3 + max(stds))
+    
+    plt.tight_layout()
+    
+    # Save
+    output_path = f'{OUTPUT_DIR}/ML_model_training_time_comparison.png'
+    plt.savefig(output_path, dpi=600, bbox_inches='tight', facecolor='white')
+    print(f"\nSaved plot: {output_path}")
+    
+    plt.close()
+
+
+times = benchmark_models()
+save_times(times)
+create_barplot(times)
+
+
+
+
+
+
+
+
+
+##### Figure 3 (Panel D) Regress out among 5 models (Conch, ProvGigapath, UNI2h, Virchow, Virchow2)
 
 
 def check_feature_statistics():
@@ -549,7 +1088,7 @@ def check_feature_statistics():
     Check the numerical range and distribution of features for four foundation models
     """
     # Data paths and model names
-    input_dir = '/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Training_features'
+    input_dir = '/Training_features'
     model_names = ["ResNet50", "Conch", "Prov-GigaPath", "UNI2-h", "Virchow", "Virchow2"]
     # Map display names to file names
     model_file_names = {
@@ -664,7 +1203,7 @@ def check_feature_statistics():
         print(df_comparison.round(4))
         
         # Check scale differences
-        print(f"\n📊 SCALE ANALYSIS:")
+        print(f"\n SCALE ANALYSIS:")
         means = df_comparison['Mean'].values
         stds = df_comparison['Std'].values
         ranges = df_comparison['Range'].values
@@ -921,7 +1460,7 @@ def regress_out_features():
                 print(f"  R² = {r2:.4f}")
                 print(f"  Residual stats: mean={residual.mean():.4f}, std={residual.std():.4f}")
 
-    print(f"\n✅ Generated {len(residuals)} residuals (E)!")
+    print(f"\n Generated {len(residuals)} residuals (E)!")
     print(f"Residual keys: {list(residuals.keys())}")
     return residuals, regression_results
 
@@ -993,7 +1532,7 @@ for label in cbar.get_yticklabels():
 cbar.set_ylabel('R² Score', fontsize=16, fontweight='bold', color='black')
 
 plt.tight_layout()
-plt.savefig('/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/Visual/foundation_model_complementarity_matrix.png', dpi=600, bbox_inches='tight')
+plt.savefig('/Visual/foundation_model_complementarity_matrix.png', dpi=600, bbox_inches='tight')
 plt.close()
 
 
