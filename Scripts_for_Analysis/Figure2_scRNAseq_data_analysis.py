@@ -1265,6 +1265,11 @@ CARD_results_vis(df = Celltype_proportion_df_mean_total, group = False)
 
 
 
+### Figure 2 (Panel D)
+## For the visualization code, please refer to:
+## 1. STpath_COAD/Workflow/StepB_Cell_Type_Deconvolution/CARD_Results_Validation_Cody.py
+## 2. STpath_COAD/Workflow/StepB_Cell_Type_Deconvolution/CARD_Results_Validation_FH.py
+## 3. STpath_COAD/Workflow/StepB_Cell_Type_Deconvolution/CARD_Results_Validation_HEST.py
 
 
 
