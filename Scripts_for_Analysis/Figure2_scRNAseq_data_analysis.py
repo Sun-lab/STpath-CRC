@@ -3,15 +3,19 @@ STPath-COAD: Single-cell RNA-seq Data Analysis for Figure 2
 ==========================================================
 
 This script analyzes single-cell RNA-seq data to identify cell types and generate 
-visualizations for Figure 2. Includes cell type annotation, marker gene identification,
-and UMAP visualization.
+visualizations for Figure 2 Panel A-B. Includes cell type annotation, marker gene identification,
+and UMAP visualizationc.
+
+This script also generates plots for cell type deconvolution analysis (Figure 2 Panel C-E). Including average proportions by different 
+cell types for all colorectal samples, correlation analysis between deconvoluted cell type proportions and
+marker gene expression–based relative expression, and a representative H&E image 
+with corresponding spatial hexagonal binned heatmaps of deconvoluted tumor cell proportions and
+marker gene–based evidence, highlighting consistent spatial enrichment patterns.
 
 Author: Saishi Cui
-Date: December 2025
+Date: Feb 2026
 
-Purpose: Process and analyze scRNA-seq data, perform cell type annotation using 
-multiple strategies, identify marker genes, and create UMAP visualizations for 
-Figure 2 of the paper.
+
 """
 
 import scanpy as sc
