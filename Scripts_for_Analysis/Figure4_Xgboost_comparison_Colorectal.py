@@ -1,5 +1,5 @@
 """
-STPath-COAD: XGBoost Model Comparison Analysis for Figure 4
+STPath-COAD: XGBoost Model Comparison Analysis (Colorectal) for Figure 4
 ==========================================================
 
 This script performs cross-validated performance, gene expression, and spatial agreement of STpath predictions for colorectal cancer,
