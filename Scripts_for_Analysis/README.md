@@ -42,7 +42,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Model sensitivity to image perturbations
   - Cross-sample consistency metrics
   - Reliability analysis for clinical applications
-- **Output**: Figure 5 (consistency plots, reliability metrics, robustness analysis)
 
 ### Figure 6: TCGA COAD Analysis
 - **Script**: `Figure6_TCGA_COAD_Analysis.py`
@@ -208,19 +207,19 @@ For foundation models, follow specific installation instructions in `../Workflow
 
 ### Cell Type Nomenclature
 
-**Colorectal Cancer (COAD)**:
-- Cancer Cells (malignant epithelial)
-- Stromal Cells (fibroblasts, CAFs)
-- Normal Epithelial Cells (non-malignant epithelial)
-- T Cells (T lymphocytes)
-- pan-APC Cells (B cells + Myeloid cells)
+**Colorectal Cancer**:
+- Cancer Cells (Colorectal carcinoma, Adenoma, and Serrated-specific cells)
+- Stromal Cells (Fibroblasts, Endothelial cells)
+- Normal Epithelial Cells (Goblet cells, Absorptive colonocytes, Enteroendocrine cells, Tuft cells)
+- T Cells (CD4+ and CD8+ T lymphocytes)
+- pan-APC Cells (B cells + Myeloid cells + Plasma cells + Mast cells)
 
-**Breast Cancer (BRCA)**:
-- Tumor Cells (malignant epithelial)
-- Stromal Cells (fibroblasts, CAFs)
-- Normal Epithelial Cells (non-malignant epithelial)
-- T Cells (T lymphocytes)
-- pan-APC Cells (B cells + Myeloid cells)
+**Breast Cancer**:
+- Cancer Cells 
+- Stromal Cells (Cancer-associated Fibroblasts, Perivascular-Like cells, Endothelial cells)
+- Normal Epithelial Cells
+- T Cells  (CD4+ and CD8+ T lymphocytes)
+- pan-APC Cells (B cells + Myeloid cells + Plasma cells)
 
 ### Foundation Models
 1. **Conch**: Contrastive learning-based foundation model
@@ -229,24 +228,6 @@ For foundation models, follow specific installation instructions in `../Workflow
 4. **Virchow2**: Virchow foundation model (v2)
 5. **UNI2h**: Universal pathology foundation model (2-headed)
 6. **ResNet50**: Baseline CNN model (ImageNet pretrained)
-
-## Output Files
-
-### Figures
-All figures are saved in `../Figures/` directory:
-- `Figure2_*.png` - Single-cell analysis results
-- `Figure3_*.png` - UMAP analysis
-- `Figure4_*.png` - COAD model comparison
-- `Figure5_*.png` - Consistency analysis
-- `Figure6_*.png` - TCGA COAD analysis
-- `Figure7_*.png` - BRCA model comparison
-- `FigureS1_*.png` - pan-APC and expression prediction
-- `FigureS6_*.png` - Soft segmentation
-- `FigureS8_*.png` - Naive CV performance
-
-### Supplementary Files
-- `Important_Features_All_CellTypes_COAD.xlsx` - Feature importance for COAD
-- `/BRCA_XGBoost_Results/Important_Features_All_CellTypes_BRCA.xlsx` - Feature importance for BRCA
 
 ### Intermediate Files
 - `*.pkl` - Pickle files with processed results
