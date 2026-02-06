@@ -1,5 +1,5 @@
 """
-STPath-COAD: Within-Sample XGBoost Model Training and Evaluation
+STPath-COAD: Within-Sample XGBoost Model Training and Evaluation (Naive cross-validation) for Figure S8.
 ===============================================================
 
 This script trains XGBoost models for predicting cell type proportions in colorectal cancer
