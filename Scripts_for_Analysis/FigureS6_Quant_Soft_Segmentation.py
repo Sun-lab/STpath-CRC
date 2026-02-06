@@ -1,16 +1,14 @@
 """
-STPath-COAD: Soft Segmentation Analysis for Figure 6
+STPath-COAD: Quantatitive Soft Segmentation Analysis for Figure S6
 ===================================================
 
 This script performs soft tissue segmentation analysis for spatial transcriptomics data
-and generates visualizations for Figure 6. Implements probabilistic segmentation approaches.
+and generates visualizations for Figure S6. Implements probabilistic segmentation approaches.
 
 Author: Saishi Cui
-Date: December 2025
+Date: Feb 2026
 
-Purpose: Implement and evaluate soft segmentation approaches for tissue region 
-identification in spatial transcriptomics data, generating comprehensive 
-segmentation analysis for Figure 6 of the paper.
+
 """
 
 import numpy as np
