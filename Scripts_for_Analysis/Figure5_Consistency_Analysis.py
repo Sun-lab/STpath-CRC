@@ -6,11 +6,8 @@ This script analyzes consistency of STPath model predictions across different co
 and generates visualizations for Figure 5. Evaluates model robustness and reliability.
 
 Author: Saishi Cui
-Date: December 2025
+Date: Feb 2026
 
-Purpose: Evaluate model consistency across different image patches, assess prediction
-reliability, and generate comprehensive consistency analysis visualizations for 
-Figure 5 of the paper.
 """
 
 import numpy as np
@@ -198,7 +195,7 @@ def cell_type_proportion_prediction(image_info_list, cell_type, xgboost_model_pa
     
     # Load important features
 
-    important_features_path = f"/Users/scui2/Desktop/Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_{cell_type}.pkl"
+    important_features_path = f"/xgboost_prediction/important_features_{cell_type}.pkl"
     log(f"Loading important features from {important_features_path}")
     important_features = pickle.load(open(important_features_path, "rb"))
     
