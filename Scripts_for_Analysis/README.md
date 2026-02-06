@@ -13,8 +13,7 @@ This directory contains scripts for generating all figures, supplementary figure
   - UMAP visualization of cell populations
   - Marker gene identification and validation
   - Cell type deconvolution benchmarking
-- **Output**: Figure 2 panels A-E (UMAP plots, marker gene heatmaps, deconvolution validation)
-- **Data Required**: VUMC single-cell RNA-seq data (h5ad format)
+
 
 ### Figure 3: UMAP Analysis with Contribution Regression
 - **Script**: `Figure3_UMAP_Contri_RegressOut.py`
@@ -24,8 +23,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Batch effect and technical variation regression
   - UMAP visualization of tissue morphology
   - Contribution analysis of different factors
-- **Output**: Figure 3 (UMAP plots with and without regression, contribution analysis)
-- **Models Used**: All 5 foundation models (Conch, ProvGigapath, Virchow, Virchow2, UNI2h)
 
 ### Figure 4: XGBoost Model Comparison for Colorectal Cancer
 - **Script**: `Figure4_Xgboost_comparison_Colorectal.py`
@@ -36,8 +33,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Foundation model benchmark analysis
   - Spatial visualization of predictions
   - Gene expression prediction validation
-- **Output**: Figure 4 panels A-C (performance metrics, spatial predictions, correlation plots)
-- **Cell Types**: Cancer Cells, Stromal Cells, Normal Epithelial Cells, T Cells, pan-APC Cells
 
 ### Figure 5: Model Consistency Analysis
 - **Script**: `Figure5_Consistency_Analysis.py`
@@ -58,8 +53,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Hexagonal spatial heatmap generation
   - Distance-to-tumor analysis
   - Clinical correlation analysis
-- **Output**: Figure 6 (hexagonal heatmaps, cell type distributions, clinical associations)
-- **Data**: TCGA COAD whole slide images (n=276 patients)
 
 ### Figure 7: XGBoost Model Comparison for Breast Cancer
 - **Script**: `Figure7_Xgboost_comparison_Breast.py`
@@ -69,8 +62,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Model performance comparison for breast cancer
   - Cell type-specific prediction accuracy for BRCA
   - Foundation model generalization analysis
-- **Output**: Figure 7 (performance metrics for BRCA, spatial predictions)
-- **Cell Types**: Tumor Cells, Stromal Cells, Normal Epithelial Cells, T Cells, pan-APC Cells
 
 ## Supplementary Figures
 
@@ -82,7 +73,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Gene expression prediction from histopathology features
   - Partial correlation analysis between cell types and gene expression
   - Model contribution analysis
-- **Output**: Figure S1 panels A-D (pan-APC comparison, expression prediction, correlation analysis)
 
 ### Figure S2-S4: Cross-reference Figures
 - **Script**: `FigureS2-S4.py`
@@ -100,7 +90,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Probabilistic cell type assignment
   - Spatial uncertainty quantification
   - Comparison with hard segmentation approaches
-- **Output**: Figure S6 (soft segmentation visualizations, uncertainty maps)
 
 ### Figure S8: Naive Cross-Validation Performance
 - **Script**: `FigureS8_Naive_CV_performance.py`
@@ -110,8 +99,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Performance metrics for all 5 cell types
   - Comparison across all foundation models
   - Baseline performance benchmarking
-- **Output**: Figure S8 (naive CV performance metrics, comparison plots)
-- **Models**: All 6 foundation models (Conch, ProvGigapath, Virchow, Virchow2, UNI2h, ResNet50)
 
 ## Supplementary Files
 
@@ -123,11 +110,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Top 30% most important features extraction
   - Multi-model feature comparison
   - Excel file generation with formatted feature tables
-- **Output**: 
-  - `Important_Features_All_CellTypes_COAD.xlsx` (multi-sheet Excel file)
-  - Individual pickle files for each cell type's important features
-- **Models**: Conch, ProvGigapath, Virchow, Virchow2, UNI2h
-- **Cell Types**: Cancer Cells, Stromal Cells, Normal Epithelial Cells, T Cells, pan-APC Cells
 
 ### Supplementary File 4: Important Features for Breast Cancer
 - **Script**: `Sup_file4_Make_Important_Features_Breast.py`
@@ -137,11 +119,6 @@ This directory contains scripts for generating all figures, supplementary figure
   - Top 30% most important features extraction
   - Cross-cancer feature comparison capability
   - Excel file generation with formatted feature tables
-- **Output**: 
-  - `/BRCA_XGBoost_Results/Important_Features_All_CellTypes_BRCA.xlsx` (multi-sheet Excel file)
-  - Individual pickle files for each cell type's important features
-- **Models**: Conch, ProvGigapath, Virchow, Virchow2, UNI2h
-- **Cell Types**: Tumor Cells, Stromal Cells, Normal Epithelial Cells, T Cells, pan-APC Cells
 
 ## Directory Structure
 
@@ -181,28 +158,6 @@ Scripts_for_Analysis/
    ```python
    login(token="your_huggingface_token")
    ```
-
-### Running Scripts
-
-Each script can be run independently:
-
-```bash
-# Example: Generate Figure 2
-python Figure2_scRNAseq_data_analysis.py
-
-# Example: Generate Figure 4 (COAD analysis)
-python Figure4_Xgboost_comparison_Colorectal.py
-
-# Example: Generate Supplementary File 3
-python Sup_file3_Make_Important_Features_Colorectal.py
-```
-
-### Expected Outputs
-
-- **Figures**: Publication-ready PNG/PDF files with high-resolution plots
-- **Excel Files**: Formatted multi-sheet Excel files with feature importance tables
-- **Pickle Files**: Intermediate results for downstream analysis
-- **Metrics**: Performance metrics (R², MAE, correlation coefficients)
 
 ## Dependencies
 
