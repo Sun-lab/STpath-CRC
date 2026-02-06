@@ -14,15 +14,39 @@ This repository contains the complete analysis pipeline and scripts for the STPa
 - **Cross-validation Framework**: Leave-one-individual-out (LOIO) validation strategy
 - **Visualization Tools**: Hexagonal heatmaps, UMAP embeddings, and soft segmentation
 
+## Foundation Models Used
+
+This framework evaluates six state-of-the-art foundation models for histopathology:
+
+1. **Conch**: Lu, Ming Y., et al. "A visual-language foundation model for computational pathology." *Nature medicine* 30.3 (2024): 863-874.
+
+2. **UNI2h**: Chen, Richard J., et al. "Towards a general-purpose foundation model for computational pathology." *Nature medicine* 30.3 (2024): 850-862.
+
+3. **ProvGigapath**: Xu, Hanwen, et al. "A whole-slide foundation model for digital pathology from real-world data." *Nature* 630.8015 (2024): 181-188.
+
+4. **Virchow**: Vorontsov, Eugene, et al. "A foundation model for clinical-grade computational pathology and rare cancers detection." *Nature medicine* 30.10 (2024): 2924-2935.
+
+5. **Virchow2**: Zimmermann, Eric, et al. "Virchow2: Scaling self-supervised mixed magnification models in pathology." *arXiv preprint arXiv:2408.00738* (2024)
+
+6. **ResNet50**: He, Kaiming, et al. "Deep Residual Learning for Image Recognition." *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition*, 2016, pp. 770–778.
+
 ## Cell Type Classification
 
-The framework predicts proportions for 5 merged cell types:
+The framework predicts proportions for 5 major cell types:
 
-1. **Cancer Cells**: Colorectal carcinoma, adenoma, and serrated-specific cells
-2. **Stromal Cells**: Cancer-associated fibroblasts (CAFs) and endothelial cells
-3. **Normal Epithelial Cells**: Goblet cells, absorptive colonocytes, enteroendocrine cells, tuft cells
-4. **T Cells**: CD4+ and CD8+ T lymphocytes
-5. **Other Immune Cells**: B cells, plasma cells, myeloid cells (pan-APC)
+**Colorectal Cancer (COAD)**:
+1. **Cancer Cells** - Malignant epithelial cells (colorectal carcinoma, adenoma, serrated-specific)
+2. **Stromal Cells** - Fibroblasts and cancer-associated fibroblasts (CAFs)
+3. **Normal Epithelial Cells** - Non-malignant epithelial cells (goblet cells, absorptive colonocytes, enteroendocrine cells, tuft cells)
+4. **T Cells** - T lymphocytes (CD4+ and CD8+ T cells)
+5. **pan-APC Cells** - B cells and Myeloid cells combined (antigen-presenting cells)
+
+**Breast Cancer (BRCA)**:
+1. **Tumor Cells** - Malignant epithelial cells
+2. **Stromal Cells** - Fibroblasts and cancer-associated fibroblasts (CAFs)
+3. **Normal Epithelial Cells** - Non-malignant epithelial cells
+4. **T Cells** - T lymphocytes (CD4+ and CD8+ T cells)
+5. **pan-APC Cells** - B cells and Myeloid cells combined (antigen-presenting cells)
 
 ## Repository Structure
 
@@ -125,7 +149,7 @@ R packages:
 ### Hardware Requirements
 - **Recommended**: GPU with 16GB+ VRAM (for foundation model feature extraction)
 - **Minimum**: CPU with 32GB RAM
-- **Storage**: 100GB+ for models, data, and intermediate results
+- **Storage**: 100GB+ for data, models, and intermediate results
 
 ### Data Requirements
 1. **Spatial Transcriptomics Data**: Spot-level gene expression and spatial coordinates

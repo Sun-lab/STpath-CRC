@@ -1,16 +1,17 @@
 """
-STPath-COAD: Important Features Extraction for Supplementary File S3
+STPath-BRCA: Important Features Extraction for Supplementary File S3
 ===================================================================
 
 This script extracts and processes important features from trained XGBoost models
-to create supplementary tables showing feature importance across different models.
+to create supplementary tables showing feature importance across different models
+for Breast Cancer (BRCA) data.
 
 Author: Saishi Cui
-Date: December 2025
+Date: Feb 2026
 
 Purpose: Extract feature importance scores from trained XGBoost models for all
 cell types and foundation models, create comprehensive feature importance tables
-for Supplementary File S3 of the paper.
+for Supplementary File S3 of the paper (Breast Cancer version).
 """
 
 import torch
@@ -20,101 +21,102 @@ from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 
-### Cancer Cells
+### Tumor Cells
 
-Conch_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
-ProvGigapath_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow2_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
-UNI2h_Cancer_Cells_data = torch.load(f = "xgboost_prediction/Cancer Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
-
-
-Important_Features_Cancer_Cells = {}
-
-Conch_FI_Cancer_Cells_DF = pd.DataFrame.from_dict(Conch_Cancer_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(Conch_Cancer_Cells_data["feature_importances"])):
-    Conch_FI_Cancer_Cells_DF = pd.concat([Conch_FI_Cancer_Cells_DF, pd.DataFrame.from_dict(Conch_Cancer_Cells_data["feature_importances"][i], orient='index')], axis=1)
-
-Conch_FI_Cancer_Cells_DF.fillna(0, inplace=True)
-Conch_FI_Cancer_Cells_DF_mean = Conch_FI_Cancer_Cells_DF.mean(axis=1)
-Conch_FI_Cancer_Cells_DF_mean_sorted = Conch_FI_Cancer_Cells_DF_mean.sort_values(ascending=False)
-Conch_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage = Conch_FI_Cancer_Cells_DF_mean_sorted.cumsum()/Conch_FI_Cancer_Cells_DF_mean_sorted.sum()
-Conch_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Conch_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Cancer_Cells["Conch"] = list(Conch_FI_Cancer_Cells_DF_mean_sorted.index[0:round(len(Conch_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Cancer_Cells["Conch_percentage"] = round(Conch_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Conch_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+Conch_Tumor_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Tumor_Conch_individual_level/xgboost_results_individual_level.pt")
+ProvGigapath_Tumor_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Tumor_ProvGigapath_individual_level/xgboost_results_individual_level.pt")
+Virchow2_Tumor_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Tumor_Virchow2_individual_level/xgboost_results_individual_level.pt")
+Virchow_Tumor_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Tumor_Virchow_individual_level/xgboost_results_individual_level.pt")
+UNI2h_Tumor_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Tumor_UNI2h_individual_level/xgboost_results_individual_level.pt")
 
 
-ProvGigapath_FI_Cancer_Cells_DF = pd.DataFrame.from_dict(ProvGigapath_Cancer_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(ProvGigapath_Cancer_Cells_data["feature_importances"])):
-    ProvGigapath_FI_Cancer_Cells_DF = pd.concat([ProvGigapath_FI_Cancer_Cells_DF, pd.DataFrame.from_dict(ProvGigapath_Cancer_Cells_data["feature_importances"][i], orient='index')], axis=1)
-ProvGigapath_FI_Cancer_Cells_DF.fillna(0, inplace=True)
-ProvGigapath_FI_Cancer_Cells_DF_mean = ProvGigapath_FI_Cancer_Cells_DF.mean(axis=1)
-ProvGigapath_FI_Cancer_Cells_DF_mean_sorted = ProvGigapath_FI_Cancer_Cells_DF_mean.sort_values(ascending=False)
-ProvGigapath_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage = ProvGigapath_FI_Cancer_Cells_DF_mean_sorted.cumsum()/ProvGigapath_FI_Cancer_Cells_DF_mean_sorted.sum()
-ProvGigapath_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(ProvGigapath_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Cancer_Cells["ProvGigapath"] = list(ProvGigapath_FI_Cancer_Cells_DF_mean_sorted.index[0:round(len(ProvGigapath_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Cancer_Cells["ProvGigapath_percentage"] = round(ProvGigapath_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(ProvGigapath_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+Important_Features_Tumor_Cells = {}
+
+Conch_FI_Tumor_Cells_DF = pd.DataFrame.from_dict(Conch_Tumor_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(Conch_Tumor_Cells_data["feature_importances"])):
+    Conch_FI_Tumor_Cells_DF = pd.concat([Conch_FI_Tumor_Cells_DF, pd.DataFrame.from_dict(Conch_Tumor_Cells_data["feature_importances"][i], orient='index')], axis=1)
+
+Conch_FI_Tumor_Cells_DF.fillna(0, inplace=True)
+Conch_FI_Tumor_Cells_DF_mean = Conch_FI_Tumor_Cells_DF.mean(axis=1)
+Conch_FI_Tumor_Cells_DF_mean_sorted = Conch_FI_Tumor_Cells_DF_mean.sort_values(ascending=False)
+Conch_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage = Conch_FI_Tumor_Cells_DF_mean_sorted.cumsum()/Conch_FI_Tumor_Cells_DF_mean_sorted.sum()
+Conch_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Conch_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_Tumor_Cells["Conch"] = list(Conch_FI_Tumor_Cells_DF_mean_sorted.index[0:round(len(Conch_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_Tumor_Cells["Conch_percentage"] = round(Conch_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Conch_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
-Virchow_FI_Cancer_Cells_DF = pd.DataFrame.from_dict(Virchow_Cancer_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(Virchow_Cancer_Cells_data["feature_importances"])):
-    Virchow_FI_Cancer_Cells_DF = pd.concat([Virchow_FI_Cancer_Cells_DF, pd.DataFrame.from_dict(Virchow_Cancer_Cells_data["feature_importances"][i], orient='index')], axis=1)
-Virchow_FI_Cancer_Cells_DF.fillna(0, inplace=True)
-Virchow_FI_Cancer_Cells_DF_mean = Virchow_FI_Cancer_Cells_DF.mean(axis=1)
-Virchow_FI_Cancer_Cells_DF_mean_sorted = Virchow_FI_Cancer_Cells_DF_mean.sort_values(ascending=False)
-Virchow_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage = Virchow_FI_Cancer_Cells_DF_mean_sorted.cumsum()/Virchow_FI_Cancer_Cells_DF_mean_sorted.sum()
-Virchow_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Virchow_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Cancer_Cells["Virchow"] = list(Virchow_FI_Cancer_Cells_DF_mean_sorted.index[0:round(len(Virchow_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Cancer_Cells["Virchow_percentage"] = round(Virchow_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Virchow_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+ProvGigapath_FI_Tumor_Cells_DF = pd.DataFrame.from_dict(ProvGigapath_Tumor_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(ProvGigapath_Tumor_Cells_data["feature_importances"])):
+    ProvGigapath_FI_Tumor_Cells_DF = pd.concat([ProvGigapath_FI_Tumor_Cells_DF, pd.DataFrame.from_dict(ProvGigapath_Tumor_Cells_data["feature_importances"][i], orient='index')], axis=1)
+ProvGigapath_FI_Tumor_Cells_DF.fillna(0, inplace=True)
+ProvGigapath_FI_Tumor_Cells_DF_mean = ProvGigapath_FI_Tumor_Cells_DF.mean(axis=1)
+ProvGigapath_FI_Tumor_Cells_DF_mean_sorted = ProvGigapath_FI_Tumor_Cells_DF_mean.sort_values(ascending=False)
+ProvGigapath_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage = ProvGigapath_FI_Tumor_Cells_DF_mean_sorted.cumsum()/ProvGigapath_FI_Tumor_Cells_DF_mean_sorted.sum()
+ProvGigapath_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(ProvGigapath_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_Tumor_Cells["ProvGigapath"] = list(ProvGigapath_FI_Tumor_Cells_DF_mean_sorted.index[0:round(len(ProvGigapath_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_Tumor_Cells["ProvGigapath_percentage"] = round(ProvGigapath_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(ProvGigapath_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
-Virchow2_FI_Cancer_Cells_DF = pd.DataFrame.from_dict(Virchow2_Cancer_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(Virchow2_Cancer_Cells_data["feature_importances"])):
-    Virchow2_FI_Cancer_Cells_DF = pd.concat([Virchow2_FI_Cancer_Cells_DF, pd.DataFrame.from_dict(Virchow2_Cancer_Cells_data["feature_importances"][i], orient='index')], axis=1)
-Virchow2_FI_Cancer_Cells_DF.fillna(0, inplace=True)
-Virchow2_FI_Cancer_Cells_DF_mean = Virchow2_FI_Cancer_Cells_DF.mean(axis=1)
-Virchow2_FI_Cancer_Cells_DF_mean_sorted = Virchow2_FI_Cancer_Cells_DF_mean.sort_values(ascending=False)
-Virchow2_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage = Virchow2_FI_Cancer_Cells_DF_mean_sorted.cumsum()/Virchow2_FI_Cancer_Cells_DF_mean_sorted.sum()
-Virchow2_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Virchow2_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Cancer_Cells["Virchow2"] = list(Virchow2_FI_Cancer_Cells_DF_mean_sorted.index[0:round(len(Virchow2_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Cancer_Cells["Virchow2_percentage"] = round(Virchow2_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Virchow2_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+Virchow_FI_Tumor_Cells_DF = pd.DataFrame.from_dict(Virchow_Tumor_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(Virchow_Tumor_Cells_data["feature_importances"])):
+    Virchow_FI_Tumor_Cells_DF = pd.concat([Virchow_FI_Tumor_Cells_DF, pd.DataFrame.from_dict(Virchow_Tumor_Cells_data["feature_importances"][i], orient='index')], axis=1)
+Virchow_FI_Tumor_Cells_DF.fillna(0, inplace=True)
+Virchow_FI_Tumor_Cells_DF_mean = Virchow_FI_Tumor_Cells_DF.mean(axis=1)
+Virchow_FI_Tumor_Cells_DF_mean_sorted = Virchow_FI_Tumor_Cells_DF_mean.sort_values(ascending=False)
+Virchow_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage = Virchow_FI_Tumor_Cells_DF_mean_sorted.cumsum()/Virchow_FI_Tumor_Cells_DF_mean_sorted.sum()
+Virchow_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Virchow_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_Tumor_Cells["Virchow"] = list(Virchow_FI_Tumor_Cells_DF_mean_sorted.index[0:round(len(Virchow_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_Tumor_Cells["Virchow_percentage"] = round(Virchow_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Virchow_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
-UNI2h_FI_Cancer_Cells_DF = pd.DataFrame.from_dict(UNI2h_Cancer_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(UNI2h_Cancer_Cells_data["feature_importances"])):
-    UNI2h_FI_Cancer_Cells_DF = pd.concat([UNI2h_FI_Cancer_Cells_DF, pd.DataFrame.from_dict(UNI2h_Cancer_Cells_data["feature_importances"][i], orient='index')], axis=1)
-UNI2h_FI_Cancer_Cells_DF.fillna(0, inplace=True)
-UNI2h_FI_Cancer_Cells_DF_mean = UNI2h_FI_Cancer_Cells_DF.mean(axis=1)
-UNI2h_FI_Cancer_Cells_DF_mean_sorted = UNI2h_FI_Cancer_Cells_DF_mean.sort_values(ascending=False)
-UNI2h_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage = UNI2h_FI_Cancer_Cells_DF_mean_sorted.cumsum()/UNI2h_FI_Cancer_Cells_DF_mean_sorted.sum()
-UNI2h_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(UNI2h_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Cancer_Cells["UNI2h"] = list(UNI2h_FI_Cancer_Cells_DF_mean_sorted.index[0:round(len(UNI2h_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Cancer_Cells["UNI2h_percentage"] = round(UNI2h_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_Cancer_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+Virchow2_FI_Tumor_Cells_DF = pd.DataFrame.from_dict(Virchow2_Tumor_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(Virchow2_Tumor_Cells_data["feature_importances"])):
+    Virchow2_FI_Tumor_Cells_DF = pd.concat([Virchow2_FI_Tumor_Cells_DF, pd.DataFrame.from_dict(Virchow2_Tumor_Cells_data["feature_importances"][i], orient='index')], axis=1)
+Virchow2_FI_Tumor_Cells_DF.fillna(0, inplace=True)
+Virchow2_FI_Tumor_Cells_DF_mean = Virchow2_FI_Tumor_Cells_DF.mean(axis=1)
+Virchow2_FI_Tumor_Cells_DF_mean_sorted = Virchow2_FI_Tumor_Cells_DF_mean.sort_values(ascending=False)
+Virchow2_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage = Virchow2_FI_Tumor_Cells_DF_mean_sorted.cumsum()/Virchow2_FI_Tumor_Cells_DF_mean_sorted.sum()
+Virchow2_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Virchow2_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_Tumor_Cells["Virchow2"] = list(Virchow2_FI_Tumor_Cells_DF_mean_sorted.index[0:round(len(Virchow2_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_Tumor_Cells["Virchow2_percentage"] = round(Virchow2_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Virchow2_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
-print(Important_Features_Cancer_Cells["UNI2h_percentage"])
-print(Important_Features_Cancer_Cells["Virchow2_percentage"])
-print(Important_Features_Cancer_Cells["Virchow_percentage"])
-print(Important_Features_Cancer_Cells["ProvGigapath_percentage"])
-print(Important_Features_Cancer_Cells["Conch_percentage"])
+UNI2h_FI_Tumor_Cells_DF = pd.DataFrame.from_dict(UNI2h_Tumor_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(UNI2h_Tumor_Cells_data["feature_importances"])):
+    UNI2h_FI_Tumor_Cells_DF = pd.concat([UNI2h_FI_Tumor_Cells_DF, pd.DataFrame.from_dict(UNI2h_Tumor_Cells_data["feature_importances"][i], orient='index')], axis=1)
+UNI2h_FI_Tumor_Cells_DF.fillna(0, inplace=True)
+UNI2h_FI_Tumor_Cells_DF_mean = UNI2h_FI_Tumor_Cells_DF.mean(axis=1)
+UNI2h_FI_Tumor_Cells_DF_mean_sorted = UNI2h_FI_Tumor_Cells_DF_mean.sort_values(ascending=False)
+UNI2h_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage = UNI2h_FI_Tumor_Cells_DF_mean_sorted.cumsum()/UNI2h_FI_Tumor_Cells_DF_mean_sorted.sum()
+UNI2h_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(UNI2h_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_Tumor_Cells["UNI2h"] = list(UNI2h_FI_Tumor_Cells_DF_mean_sorted.index[0:round(len(UNI2h_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_Tumor_Cells["UNI2h_percentage"] = round(UNI2h_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_Tumor_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
-print(len(Important_Features_Cancer_Cells["UNI2h"]))
-print(len(Important_Features_Cancer_Cells["Virchow2"]))
-print(len(Important_Features_Cancer_Cells["Virchow"]))
-print(len(Important_Features_Cancer_Cells["ProvGigapath"]))
-print(len(Important_Features_Cancer_Cells["Conch"]))
 
-pickle.dump(Important_Features_Cancer_Cells, open("xgboost_prediction/important_features_Cancer Cells.pkl", "wb"))
+print("Tumor Cells:")
+print(Important_Features_Tumor_Cells["UNI2h_percentage"])
+print(Important_Features_Tumor_Cells["Virchow2_percentage"])
+print(Important_Features_Tumor_Cells["Virchow_percentage"])
+print(Important_Features_Tumor_Cells["ProvGigapath_percentage"])
+print(Important_Features_Tumor_Cells["Conch_percentage"])
+
+print(len(Important_Features_Tumor_Cells["UNI2h"]))
+print(len(Important_Features_Tumor_Cells["Virchow2"]))
+print(len(Important_Features_Tumor_Cells["Virchow"]))
+print(len(Important_Features_Tumor_Cells["ProvGigapath"]))
+print(len(Important_Features_Tumor_Cells["Conch"]))
+
+pickle.dump(Important_Features_Tumor_Cells, open("/BRCA_XGBoost_Results/important_features_Tumor.pkl", "wb"))
 
 
 
 ### Stromal Cells
 
-Conch_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
-ProvGigapath_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow2_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
-UNI2h_Stromal_Cells_data = torch.load(f = "xgboost_prediction/Stromal Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
+Conch_Stromal_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Stromal_Conch_individual_level/xgboost_results_individual_level.pt")
+ProvGigapath_Stromal_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Stromal_ProvGigapath_individual_level/xgboost_results_individual_level.pt")
+Virchow2_Stromal_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Stromal_Virchow2_individual_level/xgboost_results_individual_level.pt")
+Virchow_Stromal_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Stromal_Virchow_individual_level/xgboost_results_individual_level.pt")
+UNI2h_Stromal_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Stromal_UNI2h_individual_level/xgboost_results_individual_level.pt")
 
 
 Important_Features_Stromal_Cells = {}
@@ -177,12 +179,12 @@ UNI2h_FI_Stromal_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(UNI2h_FI_St
 Important_Features_Stromal_Cells["UNI2h"] = list(UNI2h_FI_Stromal_Cells_DF_mean_sorted.index[0:round(len(UNI2h_FI_Stromal_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
 Important_Features_Stromal_Cells["UNI2h_percentage"] = round(UNI2h_FI_Stromal_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_Stromal_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
+print("\nStromal Cells:")
 print(Important_Features_Stromal_Cells["UNI2h_percentage"])
 print(Important_Features_Stromal_Cells["Virchow2_percentage"])
 print(Important_Features_Stromal_Cells["Virchow_percentage"])
 print(Important_Features_Stromal_Cells["ProvGigapath_percentage"])
 print(Important_Features_Stromal_Cells["Conch_percentage"])
-
 
 print(len(Important_Features_Stromal_Cells["UNI2h"]))
 print(len(Important_Features_Stromal_Cells["Virchow2"]))
@@ -190,17 +192,17 @@ print(len(Important_Features_Stromal_Cells["Virchow"]))
 print(len(Important_Features_Stromal_Cells["ProvGigapath"]))
 print(len(Important_Features_Stromal_Cells["Conch"]))
 
-pickle.dump(Important_Features_Stromal_Cells, open("xgboost_prediction/important_features_Stromal Cells.pkl", "wb"))
+pickle.dump(Important_Features_Stromal_Cells, open("/BRCA_XGBoost_Results/important_features_Stromal.pkl", "wb"))
 
 
 
 ### Normal Epithelial Cells
 
-Conch_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
-ProvGigapath_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow2_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
-UNI2h_Normal_Epithelial_Cells_data = torch.load(f = "xgboost_prediction/Normal Epithelial Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
+Conch_Normal_Epithelial_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Normal_Epithelial_Conch_individual_level/xgboost_results_individual_level.pt")
+ProvGigapath_Normal_Epithelial_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Normal_Epithelial_ProvGigapath_individual_level/xgboost_results_individual_level.pt")
+Virchow_Normal_Epithelial_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Normal_Epithelial_Virchow_individual_level/xgboost_results_individual_level.pt")
+Virchow2_Normal_Epithelial_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Normal_Epithelial_Virchow2_individual_level/xgboost_results_individual_level.pt")
+UNI2h_Normal_Epithelial_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/Normal_Epithelial_UNI2h_individual_level/xgboost_results_individual_level.pt")
 
 Important_Features_Normal_Epithelial_Cells = {}
 
@@ -265,6 +267,7 @@ Important_Features_Normal_Epithelial_Cells["UNI2h"] = list(UNI2h_FI_Normal_Epith
 Important_Features_Normal_Epithelial_Cells["UNI2h_percentage"] = round(UNI2h_FI_Normal_Epithelial_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_Normal_Epithelial_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
+print("\nNormal Epithelial Cells:")
 print(Important_Features_Normal_Epithelial_Cells["Conch_percentage"])
 print(Important_Features_Normal_Epithelial_Cells["ProvGigapath_percentage"])
 print(Important_Features_Normal_Epithelial_Cells["Virchow_percentage"])
@@ -277,17 +280,17 @@ print(len(Important_Features_Normal_Epithelial_Cells["Virchow"]))
 print(len(Important_Features_Normal_Epithelial_Cells["Virchow2"]))
 print(len(Important_Features_Normal_Epithelial_Cells["UNI2h"]))
 
-pickle.dump(Important_Features_Normal_Epithelial_Cells, open("Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_Normal Epithelial Cells.pkl", "wb"))
+pickle.dump(Important_Features_Normal_Epithelial_Cells, open("/BRCA_XGBoost_Results/important_features_Normal_Epithelial.pkl", "wb"))
 
 
 
 ###  T cells
 
-Conch_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
-ProvGigapath_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow2_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
-UNI2h_T_Cells_data = torch.load(f = "xgboost_prediction/T Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
+Conch_T_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/T_cell_Conch_individual_level/xgboost_results_individual_level.pt")
+ProvGigapath_T_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/T_cell_ProvGigapath_individual_level/xgboost_results_individual_level.pt")
+Virchow_T_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/T_cell_Virchow_individual_level/xgboost_results_individual_level.pt")
+Virchow2_T_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/T_cell_Virchow2_individual_level/xgboost_results_individual_level.pt")
+UNI2h_T_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/T_cell_UNI2h_individual_level/xgboost_results_individual_level.pt")
 
 Important_Features_T_Cells = {}
 
@@ -351,6 +354,7 @@ Important_Features_T_Cells["UNI2h"] = list(UNI2h_FI_T_Cells_DF_mean_sorted.index
 Important_Features_T_Cells["UNI2h_percentage"] = round(UNI2h_FI_T_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_T_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
+print("\nT Cells:")
 print(Important_Features_T_Cells["Conch_percentage"])
 print(Important_Features_T_Cells["ProvGigapath_percentage"])
 print(Important_Features_T_Cells["Virchow_percentage"])
@@ -363,92 +367,92 @@ print(len(Important_Features_T_Cells["Virchow"]))
 print(len(Important_Features_T_Cells["Virchow2"]))
 print(len(Important_Features_T_Cells["UNI2h"]))
 
-pickle.dump(Important_Features_T_Cells, open("Colorectal_Cancer_HE_patches/xgboost_prediction/important_features_T Cells.pkl", "wb"))
+pickle.dump(Important_Features_T_Cells, open("/BRCA_XGBoost_Results/important_features_T_cell.pkl", "wb"))
 
 
 
-### Other Immune Cells
+### pan-APC Cells
 
-Conch_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_Conch_individual_level_ratio100/xgboost_results_individual_level.pt")
-ProvGigapath_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_ProvGigapath_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_Virchow_individual_level_ratio100/xgboost_results_individual_level.pt")
-Virchow2_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_Virchow2_individual_level_ratio100/xgboost_results_individual_level.pt")
-UNI2h_Other_Immune_Cells_data = torch.load(f = "xgboost_prediction/Other Immune Cells_UNI2h_individual_level_ratio100/xgboost_results_individual_level.pt")
+Conch_pan_APC_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/pan_APC_Conch_individual_level/xgboost_results_individual_level.pt")
+ProvGigapath_pan_APC_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/pan_APC_ProvGigapath_individual_level/xgboost_results_individual_level.pt")
+Virchow_pan_APC_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/pan_APC_Virchow_individual_level/xgboost_results_individual_level.pt")
+Virchow2_pan_APC_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/pan_APC_Virchow2_individual_level/xgboost_results_individual_level.pt")
+UNI2h_pan_APC_Cells_data = torch.load(f = "/BRCA_XGBoost_Results/pan_APC_UNI2h_individual_level/xgboost_results_individual_level.pt")
 
-Important_Features_Other_Immune_Cells = {}
+Important_Features_pan_APC_Cells = {}
 
-Conch_FI_Other_Immune_Cells_DF = pd.DataFrame.from_dict(Conch_Other_Immune_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(Conch_Other_Immune_Cells_data["feature_importances"])):
-    Conch_FI_Other_Immune_Cells_DF = pd.concat([Conch_FI_Other_Immune_Cells_DF, pd.DataFrame.from_dict(Conch_Other_Immune_Cells_data["feature_importances"][i], orient='index')], axis=1)
-Conch_FI_Other_Immune_Cells_DF.fillna(0, inplace=True)
-Conch_FI_Other_Immune_Cells_DF_mean = Conch_FI_Other_Immune_Cells_DF.mean(axis=1)
-Conch_FI_Other_Immune_Cells_DF_mean_sorted = Conch_FI_Other_Immune_Cells_DF_mean.sort_values(ascending=False)
-Conch_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage = Conch_FI_Other_Immune_Cells_DF_mean_sorted.cumsum()/Conch_FI_Other_Immune_Cells_DF_mean_sorted.sum()
-Conch_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Conch_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Other_Immune_Cells["Conch"] = list(Conch_FI_Other_Immune_Cells_DF_mean_sorted.index[0:round(len(Conch_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Other_Immune_Cells["Conch_percentage"] = round(Conch_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Conch_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+Conch_FI_pan_APC_Cells_DF = pd.DataFrame.from_dict(Conch_pan_APC_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(Conch_pan_APC_Cells_data["feature_importances"])):
+    Conch_FI_pan_APC_Cells_DF = pd.concat([Conch_FI_pan_APC_Cells_DF, pd.DataFrame.from_dict(Conch_pan_APC_Cells_data["feature_importances"][i], orient='index')], axis=1)
+Conch_FI_pan_APC_Cells_DF.fillna(0, inplace=True)
+Conch_FI_pan_APC_Cells_DF_mean = Conch_FI_pan_APC_Cells_DF.mean(axis=1)
+Conch_FI_pan_APC_Cells_DF_mean_sorted = Conch_FI_pan_APC_Cells_DF_mean.sort_values(ascending=False)
+Conch_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage = Conch_FI_pan_APC_Cells_DF_mean_sorted.cumsum()/Conch_FI_pan_APC_Cells_DF_mean_sorted.sum()
+Conch_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Conch_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_pan_APC_Cells["Conch"] = list(Conch_FI_pan_APC_Cells_DF_mean_sorted.index[0:round(len(Conch_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_pan_APC_Cells["Conch_percentage"] = round(Conch_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Conch_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
-ProvGigapath_FI_Other_Immune_Cells_DF = pd.DataFrame.from_dict(ProvGigapath_Other_Immune_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(ProvGigapath_Other_Immune_Cells_data["feature_importances"])):
-    ProvGigapath_FI_Other_Immune_Cells_DF = pd.concat([ProvGigapath_FI_Other_Immune_Cells_DF, pd.DataFrame.from_dict(ProvGigapath_Other_Immune_Cells_data["feature_importances"][i], orient='index')], axis=1)
-ProvGigapath_FI_Other_Immune_Cells_DF.fillna(0, inplace=True)
-ProvGigapath_FI_Other_Immune_Cells_DF_mean = ProvGigapath_FI_Other_Immune_Cells_DF.mean(axis=1)
-ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted = ProvGigapath_FI_Other_Immune_Cells_DF_mean.sort_values(ascending=False)
-ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage = ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted.cumsum()/ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted.sum()
-ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Other_Immune_Cells["ProvGigapath"] = list(ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted.index[0:round(len(ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Other_Immune_Cells["ProvGigapath_percentage"] = round(ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(ProvGigapath_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+ProvGigapath_FI_pan_APC_Cells_DF = pd.DataFrame.from_dict(ProvGigapath_pan_APC_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(ProvGigapath_pan_APC_Cells_data["feature_importances"])):
+    ProvGigapath_FI_pan_APC_Cells_DF = pd.concat([ProvGigapath_FI_pan_APC_Cells_DF, pd.DataFrame.from_dict(ProvGigapath_pan_APC_Cells_data["feature_importances"][i], orient='index')], axis=1)
+ProvGigapath_FI_pan_APC_Cells_DF.fillna(0, inplace=True)
+ProvGigapath_FI_pan_APC_Cells_DF_mean = ProvGigapath_FI_pan_APC_Cells_DF.mean(axis=1)
+ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted = ProvGigapath_FI_pan_APC_Cells_DF_mean.sort_values(ascending=False)
+ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage = ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted.cumsum()/ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted.sum()
+ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_pan_APC_Cells["ProvGigapath"] = list(ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted.index[0:round(len(ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_pan_APC_Cells["ProvGigapath_percentage"] = round(ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(ProvGigapath_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
-Virchow_FI_Other_Immune_Cells_DF = pd.DataFrame.from_dict(Virchow_Other_Immune_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(Virchow_Other_Immune_Cells_data["feature_importances"])):
-    Virchow_FI_Other_Immune_Cells_DF = pd.concat([Virchow_FI_Other_Immune_Cells_DF, pd.DataFrame.from_dict(Virchow_Other_Immune_Cells_data["feature_importances"][i], orient='index')], axis=1)
-Virchow_FI_Other_Immune_Cells_DF.fillna(0, inplace=True)
-Virchow_FI_Other_Immune_Cells_DF_mean = Virchow_FI_Other_Immune_Cells_DF.mean(axis=1)
-Virchow_FI_Other_Immune_Cells_DF_mean_sorted = Virchow_FI_Other_Immune_Cells_DF_mean.sort_values(ascending=False)
-Virchow_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage = Virchow_FI_Other_Immune_Cells_DF_mean_sorted.cumsum()/Virchow_FI_Other_Immune_Cells_DF_mean_sorted.sum()
-Virchow_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Virchow_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Other_Immune_Cells["Virchow"] = list(Virchow_FI_Other_Immune_Cells_DF_mean_sorted.index[0:round(len(Virchow_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Other_Immune_Cells["Virchow_percentage"] = round(Virchow_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Virchow_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
-
-
-Virchow2_FI_Other_Immune_Cells_DF = pd.DataFrame.from_dict(Virchow2_Other_Immune_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(Virchow2_Other_Immune_Cells_data["feature_importances"])):
-    Virchow2_FI_Other_Immune_Cells_DF = pd.concat([Virchow2_FI_Other_Immune_Cells_DF, pd.DataFrame.from_dict(Virchow2_Other_Immune_Cells_data["feature_importances"][i], orient='index')], axis=1)
-Virchow2_FI_Other_Immune_Cells_DF.fillna(0, inplace=True)
-Virchow2_FI_Other_Immune_Cells_DF_mean = Virchow2_FI_Other_Immune_Cells_DF.mean(axis=1)
-Virchow2_FI_Other_Immune_Cells_DF_mean_sorted = Virchow2_FI_Other_Immune_Cells_DF_mean.sort_values(ascending=False)
-Virchow2_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage = Virchow2_FI_Other_Immune_Cells_DF_mean_sorted.cumsum()/Virchow2_FI_Other_Immune_Cells_DF_mean_sorted.sum()
-Virchow2_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Virchow2_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Other_Immune_Cells["Virchow2"] = list(Virchow2_FI_Other_Immune_Cells_DF_mean_sorted.index[0:round(len(Virchow2_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Other_Immune_Cells["Virchow2_percentage"] = round(Virchow2_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Virchow2_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+Virchow_FI_pan_APC_Cells_DF = pd.DataFrame.from_dict(Virchow_pan_APC_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(Virchow_pan_APC_Cells_data["feature_importances"])):
+    Virchow_FI_pan_APC_Cells_DF = pd.concat([Virchow_FI_pan_APC_Cells_DF, pd.DataFrame.from_dict(Virchow_pan_APC_Cells_data["feature_importances"][i], orient='index')], axis=1)
+Virchow_FI_pan_APC_Cells_DF.fillna(0, inplace=True)
+Virchow_FI_pan_APC_Cells_DF_mean = Virchow_FI_pan_APC_Cells_DF.mean(axis=1)
+Virchow_FI_pan_APC_Cells_DF_mean_sorted = Virchow_FI_pan_APC_Cells_DF_mean.sort_values(ascending=False)
+Virchow_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage = Virchow_FI_pan_APC_Cells_DF_mean_sorted.cumsum()/Virchow_FI_pan_APC_Cells_DF_mean_sorted.sum()
+Virchow_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Virchow_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_pan_APC_Cells["Virchow"] = list(Virchow_FI_pan_APC_Cells_DF_mean_sorted.index[0:round(len(Virchow_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_pan_APC_Cells["Virchow_percentage"] = round(Virchow_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Virchow_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
-UNI2h_FI_Other_Immune_Cells_DF = pd.DataFrame.from_dict(UNI2h_Other_Immune_Cells_data["feature_importances"][0], orient='index')
-for i in range(1, len(UNI2h_Other_Immune_Cells_data["feature_importances"])):
-    UNI2h_FI_Other_Immune_Cells_DF = pd.concat([UNI2h_FI_Other_Immune_Cells_DF, pd.DataFrame.from_dict(UNI2h_Other_Immune_Cells_data["feature_importances"][i], orient='index')], axis=1)
-UNI2h_FI_Other_Immune_Cells_DF.fillna(0, inplace=True)  
-UNI2h_FI_Other_Immune_Cells_DF_mean = UNI2h_FI_Other_Immune_Cells_DF.mean(axis=1)
-UNI2h_FI_Other_Immune_Cells_DF_mean_sorted = UNI2h_FI_Other_Immune_Cells_DF_mean.sort_values(ascending=False)
-UNI2h_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage = UNI2h_FI_Other_Immune_Cells_DF_mean_sorted.cumsum()/UNI2h_FI_Other_Immune_Cells_DF_mean_sorted.sum()
-UNI2h_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(UNI2h_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
-Important_Features_Other_Immune_Cells["UNI2h"] = list(UNI2h_FI_Other_Immune_Cells_DF_mean_sorted.index[0:round(len(UNI2h_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
-Important_Features_Other_Immune_Cells["UNI2h_percentage"] = round(UNI2h_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_Other_Immune_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
+Virchow2_FI_pan_APC_Cells_DF = pd.DataFrame.from_dict(Virchow2_pan_APC_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(Virchow2_pan_APC_Cells_data["feature_importances"])):
+    Virchow2_FI_pan_APC_Cells_DF = pd.concat([Virchow2_FI_pan_APC_Cells_DF, pd.DataFrame.from_dict(Virchow2_pan_APC_Cells_data["feature_importances"][i], orient='index')], axis=1)
+Virchow2_FI_pan_APC_Cells_DF.fillna(0, inplace=True)
+Virchow2_FI_pan_APC_Cells_DF_mean = Virchow2_FI_pan_APC_Cells_DF.mean(axis=1)
+Virchow2_FI_pan_APC_Cells_DF_mean_sorted = Virchow2_FI_pan_APC_Cells_DF_mean.sort_values(ascending=False)
+Virchow2_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage = Virchow2_FI_pan_APC_Cells_DF_mean_sorted.cumsum()/Virchow2_FI_pan_APC_Cells_DF_mean_sorted.sum()
+Virchow2_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(Virchow2_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_pan_APC_Cells["Virchow2"] = list(Virchow2_FI_pan_APC_Cells_DF_mean_sorted.index[0:round(len(Virchow2_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_pan_APC_Cells["Virchow2_percentage"] = round(Virchow2_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(Virchow2_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
 
-print(Important_Features_Other_Immune_Cells["Conch_percentage"])
-print(Important_Features_Other_Immune_Cells["ProvGigapath_percentage"])
-print(Important_Features_Other_Immune_Cells["Virchow_percentage"])
-print(Important_Features_Other_Immune_Cells["Virchow2_percentage"])
-print(Important_Features_Other_Immune_Cells["UNI2h_percentage"])
+UNI2h_FI_pan_APC_Cells_DF = pd.DataFrame.from_dict(UNI2h_pan_APC_Cells_data["feature_importances"][0], orient='index')
+for i in range(1, len(UNI2h_pan_APC_Cells_data["feature_importances"])):
+    UNI2h_FI_pan_APC_Cells_DF = pd.concat([UNI2h_FI_pan_APC_Cells_DF, pd.DataFrame.from_dict(UNI2h_pan_APC_Cells_data["feature_importances"][i], orient='index')], axis=1)
+UNI2h_FI_pan_APC_Cells_DF.fillna(0, inplace=True)  
+UNI2h_FI_pan_APC_Cells_DF_mean = UNI2h_FI_pan_APC_Cells_DF.mean(axis=1)
+UNI2h_FI_pan_APC_Cells_DF_mean_sorted = UNI2h_FI_pan_APC_Cells_DF_mean.sort_values(ascending=False)
+UNI2h_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage = UNI2h_FI_pan_APC_Cells_DF_mean_sorted.cumsum()/UNI2h_FI_pan_APC_Cells_DF_mean_sorted.sum()
+UNI2h_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[int(len(UNI2h_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)]
+Important_Features_pan_APC_Cells["UNI2h"] = list(UNI2h_FI_pan_APC_Cells_DF_mean_sorted.index[0:round(len(UNI2h_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)])
+Important_Features_pan_APC_Cells["UNI2h_percentage"] = round(UNI2h_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage.iloc[round(len(UNI2h_FI_pan_APC_Cells_DF_mean_sorted_cumsum_percentage)*0.3)], 3)
 
-print(len(Important_Features_Other_Immune_Cells["Conch"]))
-print(len(Important_Features_Other_Immune_Cells["ProvGigapath"]))
-print(len(Important_Features_Other_Immune_Cells["Virchow"]))
-print(len(Important_Features_Other_Immune_Cells["Virchow2"]))
-print(len(Important_Features_Other_Immune_Cells["UNI2h"]))
 
-pickle.dump(Important_Features_Other_Immune_Cells, open("xgboost_prediction/important_features_Other Immune Cells.pkl", "wb"))
+print("\npan-APC Cells:")
+print(Important_Features_pan_APC_Cells["Conch_percentage"])
+print(Important_Features_pan_APC_Cells["ProvGigapath_percentage"])
+print(Important_Features_pan_APC_Cells["Virchow_percentage"])
+print(Important_Features_pan_APC_Cells["Virchow2_percentage"])
+print(Important_Features_pan_APC_Cells["UNI2h_percentage"])
 
+print(len(Important_Features_pan_APC_Cells["Conch"]))
+print(len(Important_Features_pan_APC_Cells["ProvGigapath"]))
+print(len(Important_Features_pan_APC_Cells["Virchow"]))
+print(len(Important_Features_pan_APC_Cells["Virchow2"]))
+print(len(Important_Features_pan_APC_Cells["UNI2h"]))
+
+pickle.dump(Important_Features_pan_APC_Cells, open("/BRCA_XGBoost_Results/important_features_pan_APC.pkl", "wb"))
 
 
 
@@ -456,11 +460,11 @@ pickle.dump(Important_Features_Other_Immune_Cells, open("xgboost_prediction/impo
 # Create multi-sheet Excel with important features for all cell types
 
 
-Important_Features_Cancer_Cells = pickle.load(open("xgboost_prediction/important_features_Cancer Cells.pkl", "rb"))
-Important_Features_Stromal_Cells = pickle.load(open("xgboost_prediction/important_features_Stromal Cells.pkl", "rb"))
-Important_Features_Normal_Epithelial_Cells = pickle.load(open("xgboost_prediction/important_features_Normal Epithelial Cells.pkl", "rb"))
-Important_Features_T_Cells = pickle.load(open("xgboost_prediction/important_features_T Cells.pkl", "rb"))
-Important_Features_Other_Immune_Cells = pickle.load(open("xgboost_prediction/important_features_Other Immune Cells.pkl", "rb"))
+Important_Features_Tumor_Cells = pickle.load(open("/BRCA_XGBoost_Results/important_features_Tumor.pkl", "rb"))
+Important_Features_Stromal_Cells = pickle.load(open("/BRCA_XGBoost_Results/important_features_Stromal.pkl", "rb"))
+Important_Features_Normal_Epithelial_Cells = pickle.load(open("/BRCA_XGBoost_Results/important_features_Normal_Epithelial.pkl", "rb"))
+Important_Features_T_Cells = pickle.load(open("/BRCA_XGBoost_Results/important_features_T_cell.pkl", "rb"))
+Important_Features_pan_APC_Cells = pickle.load(open("/BRCA_XGBoost_Results/important_features_pan_APC.pkl", "rb"))
 
 
 wb = Workbook()
@@ -468,13 +472,13 @@ wb = Workbook()
 wb.remove(wb.active)
 
 # Define cell types and their corresponding feature dictionaries in fixed order
-cell_types_order = ['Cancer_Cells', 'Stromal_Cells', 'Normal_Epithelial_Cells', 'T_Cells', 'Other_Immune_Cells']
+cell_types_order = ['Tumor_Cells', 'Stromal_Cells', 'Normal_Epithelial_Cells', 'T_Cells', 'pan_APC_Cells']
 cell_types_data = {
-    'Cancer_Cells': Important_Features_Cancer_Cells,
+    'Tumor_Cells': Important_Features_Tumor_Cells,
     'Stromal_Cells': Important_Features_Stromal_Cells, 
     'Normal_Epithelial_Cells': Important_Features_Normal_Epithelial_Cells,
     'T_Cells': Important_Features_T_Cells,
-    'Other_Immune_Cells': Important_Features_Other_Immune_Cells
+    'pan_APC_Cells': Important_Features_pan_APC_Cells
 }
 
 # Model order and their corresponding keys in dictionaries
@@ -571,13 +575,13 @@ for cell_type in cell_types_order:
     print(f"  Added {max_features} rows for {cell_type}")
 
 # Save the Excel file
-output_excel_path = "xgboost_prediction/Important_Features_All_CellTypes.xlsx"
+output_excel_path = "/BRCA_XGBoost_Results/Important_Features_All_CellTypes_BRCA.xlsx"
 wb.save(output_excel_path)
 print(f"\n✅ Multi-sheet Excel file saved to: {output_excel_path}")
 
 # Print summary
 print(f"\nSummary:")
 print(f"- 5 sheets (one per cell type)")
-print(f"- 10 columns per sheet (5 models  2 columns each)")
+print(f"- 10 columns per sheet (5 models × 2 columns each)")
 print(f"- Features sorted by importance score (highest first)")
 print(f"- Empty cells filled with blanks for alignment")

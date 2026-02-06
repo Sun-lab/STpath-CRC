@@ -14,15 +14,15 @@ This folder contains the complete computational workflow for STPath-COAD (from d
 
 ### Data Processing Pipeline
 
-![Figure S1: Data Processing 1](../Figures/Figure_S1.png)
+![Figure S9: Data Processing 1](../Figures/Figure_S9.png)
 
-**Figure S1.** 
+**Figure S9.** 
 
-![Figure S2: Data Processing 2](../Figures/Figure_S2.png)
+![Figure S10: Data Processing 2](../Figures/Figure_S10.png)
 
-**Figure S2.** 
+**Figure S10.** 
 
-![Figure S3: Data Processing 3](../Figures/Figure_S3.png)
+![Figure S11: Data Processing 3](../Figures/Figure_S11.png)
 
 
 ## Dependencies
