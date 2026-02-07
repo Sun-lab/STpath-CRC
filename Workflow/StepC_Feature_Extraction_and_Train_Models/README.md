@@ -42,7 +42,7 @@ Extracts features from COAD H&E patches using multiple foundation models.
 - Support for all 6 foundation models
 
 **Input**: 
-- H&E image patches (240×240 pixels)
+- H&E image patches (224×224 pixels)
 - Spatial coordinates and metadata
 
 **Output**: 
@@ -66,11 +66,11 @@ Trains XGBoost regression models for predicting 5 cell type proportions.
 - External validation on independent datasets
 
 **Cell Types Predicted**:
-1. Cancer Cells (malignant epithelial cells)
-2. Stromal Cells (fibroblasts, CAFs)
-3. Normal Epithelial Cells (non-malignant epithelial)
-4. T Cells (T lymphocytes)
-5. pan-APC Cells (B cells + Myeloid cells combined)
+1. Cancer Cells (Colorectal carcinoma, adenoma, and serrated-specific cells)
+2. Stromal Cells (fibroblasts, endothelial cells)
+3. Normal Epithelial Cells (goblet cells, absorptive colonocytes, enteroendocrine cells, tuft cells)
+4. T Cells (CD4+ and CD8+ T lymphocytes)
+5. pan-APC Cells (B cells + Myeloid cells + Plasma cells + Mast cells)
 
 **Input**: 
 - Precomputed foundation model features (from Step 1)
@@ -231,7 +231,7 @@ Benchmarks XGBoost against other popular ML methods to justify model choice.
 ## Configuration and Parameters
 
 ### Feature Extraction Parameters
-- **Image Size**: 240×240 pixels
+- **Image Size**: 224×224 pixels
 - **Batch Size**: 32 (adjust based on GPU memory)
 - **Feature Dimensions**:
   - Conch: 512
