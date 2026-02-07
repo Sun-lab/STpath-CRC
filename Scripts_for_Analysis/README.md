@@ -118,6 +118,10 @@ This directory contains scripts for generating all figures, supplementary figure
   - Top 30% most important features extraction
   - Cross-cancer feature comparison capability
   - Excel file generation with formatted feature tables
+ 
+### Figure 1 and Figure S9, S10, S11 are schematic or workflow figures.
+### Figure S5 and Figure S7 are related to breast cancer, please refer to STpath-BRCA
+
 
 ## Directory Structure
 
