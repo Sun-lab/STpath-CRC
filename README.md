@@ -36,14 +36,14 @@ The framework predicts proportions for 5 major cell types:
 
 **Colorectal Cancer (COAD)**:
 1. **Cancer Cells** - Malignant epithelial cells (colorectal carcinoma, adenoma, serrated-specific)
-2. **Stromal Cells** - Fibroblasts and cancer-associated fibroblasts (CAFs)
+2. **Stromal Cells** - Fibroblasts and Endothelial cells
 3. **Normal Epithelial Cells** - Non-malignant epithelial cells (goblet cells, absorptive colonocytes, enteroendocrine cells, tuft cells)
 4. **T Cells** - T lymphocytes (CD4+ and CD8+ T cells)
 5. **pan-APC Cells** - B cells and Myeloid cells combined (antigen-presenting cells)
 
 **Breast Cancer (BRCA)**:
 1. **Tumor Cells** - Malignant epithelial cells
-2. **Stromal Cells** - Fibroblasts and cancer-associated fibroblasts (CAFs)
+2. **Stromal Cells** - Cancer-associated fibroblasts and Perivascular-Like cells
 3. **Normal Epithelial Cells** - Non-malignant epithelial cells
 4. **T Cells** - T lymphocytes (CD4+ and CD8+ T cells)
 5. **pan-APC Cells** - B cells and Myeloid cells combined (antigen-presenting cells)
