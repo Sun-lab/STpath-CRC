@@ -1,4 +1,4 @@
-# STPath-COAD: Spatial Transcriptomics Pathology for Colorectal Cancer
+# STPath-CRC: Spatial Transcriptomics Pathology for Colorectal Cancer
 
 A comprehensive computational framework for predicting cell type proportions in colorectal cancer H&E images using multiple foundation models and machine learning approaches.
 
